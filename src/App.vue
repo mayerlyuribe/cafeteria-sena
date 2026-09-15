@@ -1,13 +1,8 @@
 <template>
-  <q-btn to="/rutaejemplo">ruta de ejemplo</q-btn>
-
-  <p>{{ carrito.contadorCarrito }}</p>
-  
-  <q-btn label="Sumar" @click="carrito.incrementarContador()" />
+  <router-view />
 </template>
 
 <script setup>
-import { useCarritoStore } from './stores/stores.js'
-
-const carrito = useCarritoStore()
+// Toda la app vive dentro de MainLayout (para rutas privadas) + router-view.
+// La vista de login no usa MainLayout, tiene su propio q-layout minimo.
 </script>

@@ -1,0 +1,62 @@
+.mesa-card {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border-radius: 16px;
+}
+.mesa-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+.mesa-card--disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.estado-libre {
+  background: #e8f5ee;
+  border: 2px solid #2e7d5b;
+}
+.estado-ocupada {
+  background: #fbeaea;
+  border: 2px solid #c0392b;
+}
+.estado-por_cobrar {
+  background: #fdf3e0;
+  border: 2px solid #e0a537;
+}
+
+.mesa-card--agendada {
+  outline: 2px dashed #4a7a9d;
+  outline-offset: 2px;
+}
+
+.estado-unida {
+  background: #f0f0f0;
+  border: 2px dashed #9e9e9e;
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.mesa-card--seleccionada {
+  outline: 3px solid #4a7a9d;
+  outline-offset: 2px;
+}
+
+.mesa-checkbox {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 2;
+}
+
+.subtotal-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.page-title {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
