@@ -6,7 +6,7 @@ import { siguienteId } from './utils.js'
 const USUARIOS = [
     { id: 1, nombre: 'Administrador', usuario: 'admin', clave: 'admin123', rol: 'admin' },
     { id: 2, nombre: 'Maria Gomez', usuario: 'maria', clave: '1234', rol: 'empleado' },
-    { id: 3, nombre: 'Juan Perez', usuario: 'juan', clave: '1234', rol: 'empleado' }
+    { id: 3, nombre: 'Rosa melano', usuario: 'mondaivel', clave: '123456789', rol: 'admin' }
 ]
 
 

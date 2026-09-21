@@ -1,0 +1,32 @@
+html, body, #app {
+  height: 100%;
+}
+
+body {
+  font-size: 15px;
+}
+
+.page-title {
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.page-shell {
+  width: 100%;
+}
+
+.q-page {
+  box-sizing: border-box;
+}
+
+/* Un poco mas de aire en las tarjetas para que las proporciones no se vean
+   apretadas en pantallas anchas. */
+.q-card {
+  border-radius: 10px;
+}
+
+@media (min-width: 1024px) {
+  .q-pa-md {
+    padding: 20px;
+  }
+}

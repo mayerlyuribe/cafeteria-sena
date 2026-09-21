@@ -1,68 +1,72 @@
 <template>
   <q-page class="q-pa-md" style="padding-bottom: 90px">
-    <div v-if="!mesa" class="text-center text-grey q-mt-xl">Mesa no encontrada.</div>
+    <div class="orden-container">
+      <div v-if="!mesa" class="text-center text-grey q-mt-xl">Mesa no encontrada.</div>
 
-    <template v-else>
-      <div class="row items-center q-mb-md">
-        <q-btn flat round dense icon="arrow_back" @click="$router.push('/')" />
-        <div class="text-h5 page-title q-ml-sm">Mesa {{ mesa.numero }}</div>
-        <q-badge :color="orden ? 'negative' : 'positive'" class="q-ml-md">
-          {{ orden ? '🔴 Ocupada' : '🟢 Libre' }}
-        </q-badge>
-        <q-space />
-        <div v-if="orden" class="text-caption text-grey-7">
-          Abierta: {{ formatearHora(orden?.hora_apertura) }}
-        </div>
-      </div>
-
-      <q-card v-if="!orden" flat bordered class="q-pa-lg text-center">
-        <div class="text-subtitle1 q-mb-md">Esta mesa esta libre.</div>
-        <q-btn color="primary" icon="event_seat" label="Ocupar mesa" @click="ocuparMesa" />
-      </q-card>
-
-      <q-card v-if="orden" flat bordered class="q-mb-md">
-        <q-card-section>
-          <div class="text-subtitle1 text-weight-bold q-mb-sm">Consumo actual</div>
-
-          <q-list separator v-if="items.length">
-            <q-item v-for="item in items" :key="item.id">
-              <q-item-section>
-                <q-item-label>{{ item.nombre_producto }}</q-item-label>
-                <q-item-label caption>
-                  {{ formatoMoneda(item.precio_unitario) }} c/u
-                </q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <div class="row items-center q-gutter-xs">
-                  <q-btn dense round flat icon="remove" size="sm"
-                    @click="ordenesStore.cambiarCantidad(item.id, item.cantidad - 1)" />
-                  <div class="text-body1" style="min-width: 24px; text-align: center">
-                    {{ item.cantidad }}
-                  </div>
-                  <q-btn dense round flat icon="add" size="sm"
-                    @click="ordenesStore.cambiarCantidad(item.id, item.cantidad + 1)" />
-                  <div class="text-weight-bold q-ml-sm" style="min-width: 80px; text-align: right">
-                    {{ formatoMoneda(item.precio_unitario * item.cantidad) }}
-                  </div>
-                  <q-btn dense round flat icon="delete" size="sm" color="negative"
-                    @click="ordenesStore.quitarItem(item.id)" />
-                </div>
-              </q-item-section>
-            </q-item>
-          </q-list>
-
-          <div v-else class="text-grey text-center q-pa-md">
-            Aun no se ha agregado ningun producto.
+      <template v-else>
+        <div class="row items-center q-mb-md">
+          <q-btn flat round dense icon="arrow_back" @click="$router.push('/')" />
+          <div class="text-h5 page-title q-ml-sm">Mesa {{ mesa.numero }}</div>
+          <q-badge :color="orden ? 'negative' : 'positive'" class="q-ml-md">
+            {{ orden ? '🔴 Ocupada' : '🟢 Libre' }}
+          </q-badge>
+          <q-space />
+          <div v-if="orden" class="text-caption text-grey-7">
+            Abierta: {{ formatearHora(orden?.hora_apertura) }}
           </div>
-        </q-card-section>
-      </q-card>
+        </div>
 
-      <q-btn v-if="orden" color="primary" icon="add" label="Agregar producto" class="full-width"
-        @click="dialogoAgregar = true" />
-    </template>
+        <q-card v-if="!orden" flat bordered class="q-pa-lg text-center">
+          <div class="text-subtitle1 q-mb-md">Esta mesa esta libre.</div>
+          <q-btn color="primary" icon="event_seat" label="Ocupar mesa" @click="ocuparMesa" />
+        </q-card>
+
+        <q-card v-if="orden" flat bordered class="q-mb-md">
+          <q-card-section>
+            <div class="text-subtitle1 text-weight-bold q-mb-sm">Consumo actual</div>
+
+            <q-list separator v-if="items.length">
+              <q-item v-for="item in items" :key="item.id">
+                <q-item-section>
+                  <q-item-label>{{ item.nombre_producto }}</q-item-label>
+                  <q-item-label caption>
+                    {{ formatoMoneda(item.precio_unitario) }} c/u
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <div class="row items-center q-gutter-xs">
+                    <q-btn dense round flat icon="remove" size="sm"
+                      @click="ordenesStore.cambiarCantidad(item.id, item.cantidad - 1)" />
+                    <div class="text-body1" style="min-width: 24px; text-align: center">
+                      {{ item.cantidad }}
+                    </div>
+                    <q-btn dense round flat icon="add" size="sm"
+                      @click="ordenesStore.cambiarCantidad(item.id, item.cantidad + 1)" />
+                    <div class="text-weight-bold q-ml-sm" style="min-width: 80px; text-align: right">
+                      {{ formatoMoneda(item.precio_unitario * item.cantidad) }}
+                    </div>
+                    <q-btn dense round flat icon="delete" size="sm" color="negative"
+                      @click="ordenesStore.quitarItem(item.id)" />
+                  </div>
+                </q-item-section>
+              </q-item>
+            </q-list>
+
+            <div v-else class="text-grey text-center q-pa-md">
+              Aun no se ha agregado ningun producto.
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <q-btn v-if="orden" color="primary" icon="add" label="Agregar producto" class="full-width"
+          @click="dialogoAgregar = true" />
+        <q-btn v-if="orden" outline color="negative" icon="cancel" label="Cancelar mesa" class="full-width q-mt-sm"
+          @click="dialogoCancelar = true" />
+      </template>
+    </div>
 
     <q-page-sticky v-if="orden" position="bottom" expand>
-      <q-toolbar class="bg-white subtotal-bar q-pa-md" style="border-top: 1px solid #eee">
+      <q-toolbar class="bg-white subtotal-bar q-pa-md orden-container" style="border-top: 1px solid #eee">
         <div class="text-h6">Subtotal: {{ formatoMoneda(subtotal) }}</div>
         <q-space />
         <q-btn color="warning" text-color="dark" icon="receipt_long" label="Pedir la cuenta" :disable="!items.length"
@@ -70,6 +74,22 @@
       </q-toolbar>
     </q-page-sticky>
 
+    <q-dialog v-model="dialogoCancelar">
+      <q-card style="width: 380px; max-width: 90vw">
+        <q-card-section class="text-h6">Cancelar mesa {{ mesa?.numero }}</q-card-section>
+        <q-card-section>
+          <span v-if="items.length">
+            Se eliminara la orden con {{ items.length }} producto(s) ({{ formatoMoneda(subtotal) }}) y la mesa
+            quedara libre. Esto no se puede deshacer.
+          </span>
+          <span v-else>La mesa quedara libre.</span>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Volver" v-close-popup />
+          <q-btn flat color="negative" label="Si, cancelar" @click="cancelarMesa" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
     <q-dialog v-model="dialogoAgregar">
       <q-card style="width: 420px; max-width: 90vw">
         <q-card-section class="text-h6">Agregar producto</q-card-section>
@@ -115,6 +135,7 @@ const productosStore = useProductosStore()
 const diaStore = useDiaStore()
 
 const dialogoAgregar = ref(false)
+const dialogoCancelar = ref(false)
 
 const mesa = computed(() => mesasStore.obtenerPorId(props.id))
 const orden = computed(() => ordenesStore.ordenAbiertaDeMesa(props.id))
@@ -128,6 +149,14 @@ function ocuparMesa() {
   }
   ordenesStore.abrirOrden(mesa.value.id)
   $q.notify({ type: 'positive', message: `Mesa ${mesa.value.numero} ocupada`, timeout: 900 })
+}
+
+function cancelarMesa() {
+  if (!orden.value) return
+  const numero = mesa.value.numero
+  ordenesStore.cancelarOrden(orden.value.id)
+  $q.notify({ type: 'info', message: `Mesa ${numero} cancelada y liberada` })
+  router.push('/')
 }
 
 function agregar(producto) {
@@ -151,3 +180,10 @@ function formatearHora(iso) {
   return new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
 }
 </script>
+
+<style scoped>
+.orden-container {
+  max-width: 560px;
+  margin: 0 auto;
+}
+</style>

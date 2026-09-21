@@ -12,7 +12,7 @@
         />
         <q-icon name="local_cafe" size="28px" class="q-mr-sm" />
         <q-toolbar-title class="page-title">
-          Cafeteria SENA — Gestion de mesas
+          Cafeteria SENA
         </q-toolbar-title>
 
         <q-chip

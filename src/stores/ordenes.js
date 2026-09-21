@@ -109,10 +109,19 @@ export const useOrdenesStore = defineStore('ordenes', () => {
         mesasStore.liberarMesa(orden.mesa_id)
     }
 
+    function cancelarOrden(ordenId) {
+    const mesasStore = useMesasStore()
+    const orden = obtenerOrdenPorId.value(ordenId)
+    if (!orden || orden.estado !== ESTADOS_ORDEN.ABIERTA) return
+
+    items.value = items.value.filter((it) => it.orden_id !== orden.id)
+    ordenes.value = ordenes.value.filter((o) => o.id !== orden.id)
+    mesasStore.liberarMesa(orden.mesa_id)
+}
     return {
         ordenes, items,
         obtenerOrdenPorId, ordenAbiertaDeMesa, itemsDeOrden, subtotalDeOrden, ordenesCerradas,
-        abrirOrden, agregarItem, cambiarCantidad, quitarItem, pedirCuenta, cobrarYLiberar
+        abrirOrden, agregarItem, cambiarCantidad, quitarItem, pedirCuenta, cobrarYLiberar,cancelarOrden
     }
 }, {
     persist: true
