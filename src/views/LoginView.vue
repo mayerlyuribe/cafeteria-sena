@@ -16,6 +16,7 @@
               dense
               outlined
               autofocus
+              :disable="cargando"
               @keyup.enter="ingresar"
             />
             <q-input
@@ -24,6 +25,7 @@
               dense
               outlined
               :type="verClave ? 'text' : 'password'"
+              :disable="cargando"
               @keyup.enter="ingresar"
             >
               <template #append>
@@ -39,11 +41,18 @@
 
             <q-btn
               color="primary"
-              label="Ingresar"
+              :label="cargando ? 'Verificando...' : 'Ingresar'"
               class="full-width"
               icon="login"
+              :loading="cargando"
+              :disable="cargando"
               @click="ingresar"
-            />
+            >
+              <template #loading>
+                <q-spinner-dots class="q-mr-sm" />
+                Verificando...
+              </template>
+            </q-btn>
           </q-card-section>
 
           <q-separator />
@@ -71,6 +80,7 @@ const usuario = ref('')
 const clave = ref('')
 const verClave = ref(false)
 const error = ref('')
+const cargando = ref(false)
 
 function ingresar() {
   error.value = ''
@@ -78,11 +88,18 @@ function ingresar() {
     error.value = 'Ingresa usuario y contrasena.'
     return
   }
-  const resultado = authStore.login(usuario.value, clave.value)
-  if (!resultado.ok) {
-    error.value = resultado.mensaje
-    return
-  }
-  router.push({ name: 'mapa' })
+  if (cargando.value) return
+
+  cargando.value = true
+  // Simulacion de carga al iniciar sesion (por ejemplo, validacion contra un servidor).
+  setTimeout(() => {
+    const resultado = authStore.login(usuario.value, clave.value)
+    cargando.value = false
+    if (!resultado.ok) {
+      error.value = resultado.mensaje
+      return
+    }
+    router.push({ name: 'mapa' })
+  }, 1200)
 }
 </script>
