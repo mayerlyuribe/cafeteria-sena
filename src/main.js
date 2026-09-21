@@ -15,9 +15,7 @@ pinia.use(piniaPluginPersistedstate)
 
 myApp.use(Quasar, {
     plugins: { Notify, Dialog },
-    config: {
-        notify: { position: 'top-right', timeout: 2000 }
-    }
+    config: { notify: { position: 'top-right', timeout: 2000 } }
 })
 
 myApp.use(pinia)

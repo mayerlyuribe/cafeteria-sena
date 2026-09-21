@@ -3,9 +3,6 @@
     <div class="row items-center q-mb-md q-gutter-sm">
       <div class="text-h5 page-title">Mapa del local</div>
       <q-space />
-      <q-badge color="positive" class="q-mr-sm">🟢 Libre</q-badge>
-      <q-badge color="negative" class="q-mr-sm">🔴 Ocupada</q-badge>
-      <q-badge color="warning" text-color="dark" class="q-mr-sm">🟡 Por cobrar</q-badge>
       <q-btn
         :label="modoUnion ? 'Cancelar union' : 'Unir mesas'"
         :color="modoUnion ? 'negative' : 'info'"
@@ -240,7 +237,6 @@ import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import {
   useMesasStore,
-  useOrdenesStore,
   useDiaStore,
   CAPACIDAD_MAXIMA_MESA,
   CAPACIDAD_MAXIMA_UNION
@@ -250,7 +246,6 @@ const router = useRouter()
 const $q = useQuasar()
 
 const mesasStore = useMesasStore()
-const ordenesStore = useOrdenesStore()
 const diaStore = useDiaStore()
 
 const dialogoNuevaMesa = ref(false)
@@ -260,7 +255,7 @@ const dialogoAgenda = ref(false)
 const mesaAAgendar = ref(null)
 const agenda = ref({ cliente: '', hora: '', notas: '' })
 
-/* ---------------------- Editar mesa ---------------------- */
+/* ---------------------- Editar mesa -------------------- */
 const dialogoEditar = ref(false)
 const mesaAEditar = ref(null)
 const mesaEditada = ref({ numero: null, capacidad: null })
@@ -414,7 +409,6 @@ function irAMesa(mesa) {
       $q.notify({ type: 'negative', message: 'El dia esta cerrado. No se pueden abrir nuevas ordenes.' })
       return
     }
-    ordenesStore.abrirOrden(mesa.id)
     router.push({ name: 'orden-mesa', params: { id: mesa.id } })
     return
   }

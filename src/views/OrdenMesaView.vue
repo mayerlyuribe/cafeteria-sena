@@ -6,14 +6,21 @@
       <div class="row items-center q-mb-md">
         <q-btn flat round dense icon="arrow_back" @click="$router.push('/')" />
         <div class="text-h5 page-title q-ml-sm">Mesa {{ mesa.numero }}</div>
-        <q-badge color="negative" class="q-ml-md">🔴 Ocupada</q-badge>
+        <q-badge :color="orden ? 'negative' : 'positive'" class="q-ml-md">
+          {{ orden ? '🔴 Ocupada' : '🟢 Libre' }}
+        </q-badge>
         <q-space />
-        <div class="text-caption text-grey-7">
+        <div v-if="orden" class="text-caption text-grey-7">
           Abierta: {{ formatearHora(orden?.hora_apertura) }}
         </div>
       </div>
 
-      <q-card flat bordered class="q-mb-md">
+      <q-card v-if="!orden" flat bordered class="q-pa-lg text-center">
+        <div class="text-subtitle1 q-mb-md">Esta mesa esta libre.</div>
+        <q-btn color="primary" icon="event_seat" label="Ocupar mesa" @click="ocuparMesa" />
+      </q-card>
+
+      <q-card v-if="orden" flat bordered class="q-mb-md">
         <q-card-section>
           <div class="text-subtitle1 text-weight-bold q-mb-sm">Consumo actual</div>
 
@@ -27,24 +34,18 @@
               </q-item-section>
               <q-item-section side>
                 <div class="row items-center q-gutter-xs">
-                  <q-btn
-                    dense round flat icon="remove" size="sm"
-                    @click="ordenesStore.cambiarCantidad(item.id, item.cantidad - 1)"
-                  />
+                  <q-btn dense round flat icon="remove" size="sm"
+                    @click="ordenesStore.cambiarCantidad(item.id, item.cantidad - 1)" />
                   <div class="text-body1" style="min-width: 24px; text-align: center">
                     {{ item.cantidad }}
                   </div>
-                  <q-btn
-                    dense round flat icon="add" size="sm"
-                    @click="ordenesStore.cambiarCantidad(item.id, item.cantidad + 1)"
-                  />
+                  <q-btn dense round flat icon="add" size="sm"
+                    @click="ordenesStore.cambiarCantidad(item.id, item.cantidad + 1)" />
                   <div class="text-weight-bold q-ml-sm" style="min-width: 80px; text-align: right">
                     {{ formatoMoneda(item.precio_unitario * item.cantidad) }}
                   </div>
-                  <q-btn
-                    dense round flat icon="delete" size="sm" color="negative"
-                    @click="ordenesStore.quitarItem(item.id)"
-                  />
+                  <q-btn dense round flat icon="delete" size="sm" color="negative"
+                    @click="ordenesStore.quitarItem(item.id)" />
                 </div>
               </q-item-section>
             </q-item>
@@ -56,27 +57,16 @@
         </q-card-section>
       </q-card>
 
-      <q-btn
-        color="primary"
-        icon="add"
-        label="Agregar producto"
-        class="full-width"
-        @click="dialogoAgregar = true"
-      />
+      <q-btn v-if="orden" color="primary" icon="add" label="Agregar producto" class="full-width"
+        @click="dialogoAgregar = true" />
     </template>
 
-    <q-page-sticky position="bottom" expand>
+    <q-page-sticky v-if="orden" position="bottom" expand>
       <q-toolbar class="bg-white subtotal-bar q-pa-md" style="border-top: 1px solid #eee">
         <div class="text-h6">Subtotal: {{ formatoMoneda(subtotal) }}</div>
         <q-space />
-        <q-btn
-          color="warning"
-          text-color="dark"
-          icon="receipt_long"
-          label="Pedir la cuenta"
-          :disable="!items.length"
-          @click="pedirCuenta"
-        />
+        <q-btn color="warning" text-color="dark" icon="receipt_long" label="Pedir la cuenta" :disable="!items.length"
+          @click="pedirCuenta" />
       </q-toolbar>
     </q-page-sticky>
 
@@ -89,23 +79,14 @@
               {{ categoria.toUpperCase() }}
             </div>
             <q-list separator>
-              <q-item
-                v-for="p in prods.filter((x) => x.disponible)"
-                :key="p.id"
-                clickable
-                v-ripple
-                @click="agregar(p)"
-              >
+              <q-item v-for="p in prods.filter((x) => x.disponible)" :key="p.id" clickable v-ripple @click="agregar(p)">
                 <q-item-section>
                   <q-item-label>{{ p.nombre }}</q-item-label>
                 </q-item-section>
                 <q-item-section side>{{ formatoMoneda(p.precio_actual) }}</q-item-section>
               </q-item>
             </q-list>
-            <div
-              v-if="!prods.some((x) => x.disponible)"
-              class="text-caption text-grey-5 q-pa-sm"
-            >
+            <div v-if="!prods.some((x) => x.disponible)" class="text-caption text-grey-5 q-pa-sm">
               Sin productos disponibles en esta categoria.
             </div>
           </div>
@@ -122,8 +103,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { useMesasStore, useOrdenesStore, useProductosStore } from '../stores/stores.js'
-
+import { useMesasStore, useOrdenesStore, useProductosStore, useDiaStore } from '../stores/stores.js'
 const props = defineProps({ id: { type: [String, Number], required: true } })
 
 const router = useRouter()
@@ -132,6 +112,7 @@ const $q = useQuasar()
 const mesasStore = useMesasStore()
 const ordenesStore = useOrdenesStore()
 const productosStore = useProductosStore()
+const diaStore = useDiaStore()
 
 const dialogoAgregar = ref(false)
 
@@ -139,6 +120,15 @@ const mesa = computed(() => mesasStore.obtenerPorId(props.id))
 const orden = computed(() => ordenesStore.ordenAbiertaDeMesa(props.id))
 const items = computed(() => (orden.value ? ordenesStore.itemsDeOrden(orden.value.id) : []))
 const subtotal = computed(() => (orden.value ? ordenesStore.subtotalDeOrden(orden.value.id) : 0))
+
+function ocuparMesa() {
+  if (diaStore.diaCerrado) {
+    $q.notify({ type: 'negative', message: 'El dia esta cerrado. No se pueden abrir nuevas ordenes.' })
+    return
+  }
+  ordenesStore.abrirOrden(mesa.value.id)
+  $q.notify({ type: 'positive', message: `Mesa ${mesa.value.numero} ocupada`, timeout: 900 })
+}
 
 function agregar(producto) {
   if (!orden.value) return
