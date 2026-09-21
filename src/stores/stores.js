@@ -1,18 +1,5 @@
-import {defineStore} from 'pinia'
-import {ref} from 'vue'
-
-export const useCarritoStore = defineStore('carrito', () => {
-    let contadorCarrito = ref(10)
-    
-    function incrementarContador() {
-        contadorCarrito.value++
-    }
-
-    return {
-        contadorCarrito, incrementarContador
-    }
-},
-{
-    persist: true
-}
-)
+export * from './mesas.js'
+export * from './productos.js'
+export * from './ordenes.js'
+export * from './dia.js'
+export * from './auth.js'

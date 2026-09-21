@@ -1,5 +1,5 @@
 import { createApp } from 'vue'
-import { Quasar } from 'quasar'
+import { Quasar, Notify, Dialog } from 'quasar'
 import App from './App.vue'
 import './style.css'
 import { router } from './routes/routes.js'
@@ -14,9 +14,9 @@ const pinia = createPinia()
 pinia.use(piniaPluginPersistedstate)
 
 myApp.use(Quasar, {
-    plugins: {}, 
+    plugins: { Notify, Dialog },
+    config: { notify: { position: 'top-right', timeout: 2000 } }
 })
-
 
 myApp.use(pinia)
 myApp.use(router)
