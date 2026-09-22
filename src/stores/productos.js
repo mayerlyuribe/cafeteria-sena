@@ -9,7 +9,8 @@ export const useProductosStore = defineStore('productos', () => {
         { id: 2, nombre: 'Limonada de coco', categoria: 'Bebidas', precio_actual: 6000, disponible: true },
         { id: 3, nombre: 'Arepa con queso', categoria: 'Comidas', precio_actual: 5000, disponible: true },
         { id: 4, nombre: 'Bandeja paisa', categoria: 'Comidas', precio_actual: 22000, disponible: true },
-        { id: 5, nombre: 'Tres leches', categoria: 'Postres', precio_actual: 8000, disponible: false }
+        { id: 5, nombre: 'Tres leches', categoria: 'Postres', precio_actual: 8000, disponible: false },
+        { id: 6, nombre: 'arro com chicle', categoria: 'comidas', precio_actual: 20000, disponible: false }
     ])
 
     const disponibles = computed(() => productos.value.filter((p) => p.disponible))

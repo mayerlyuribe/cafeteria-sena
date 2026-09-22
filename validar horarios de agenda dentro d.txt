@@ -1,1 +1,6 @@
     , que al momento de cancelar una agenda esta tenga un boton de confirmación, en el apartado de pago mencionar método de pago (una simulación) y mejorar el diseño que sea centrado de cuando se dividida la cuenta para que sea menos confusa, agregar un botón por si toca cancelar una mesa que estaba ocupada, (mejorar proporciones de toda la pag),crear sistema de reservacion(en este se debe de poder guardar varias reservas en el dia segun la hora cada una se debe de llevar una margen maxima de limpieza-preparacion de mesa de 15 min y una de uso por mesa de hora ). apartado de login al momeento de iniciar sesion crear una simulacion de carga 
+
+
+    maye:
+
+    Hacer botón de ver pedido, alex hace la función del botón.

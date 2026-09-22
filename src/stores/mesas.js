@@ -9,6 +9,8 @@ export const ESTADOS_MESA = {
     UNIDA: 'unida'
 }
 
+export const RESERVADA = 'reservada'
+
 export const CAPACIDAD_MAXIMA_MESA = 4
 export const CAPACIDAD_MAXIMA_UNION = 12
 
@@ -97,6 +99,13 @@ export const useMesasStore = defineStore('mesas', () => {
         const minutos = minutosParaReserva.value(mesa)
         const ocupada = mesa.estado === ESTADOS_MESA.OCUPADA || mesa.estado === ESTADOS_MESA.POR_COBRAR
         return ocupada && minutos !== null && minutos <= MINUTOS_PREPARACION
+    })
+
+        const estadoVisual = computed(() => (mesa) => {
+        if (mesa.estado === ESTADOS_MESA.LIBRE && enPreparacion.value(mesa)) {
+            return RESERVADA
+        }
+        return mesa.estado
     })
 
     function revisarAgendas() {
@@ -365,7 +374,8 @@ export const useMesasStore = defineStore('mesas', () => {
         agregarMesa, editarMesa, eliminarMesa, unirMesas, separarUnion,
         agendarMesa, cancelarReserva,
         reservasOrdenadas, reservasVigentes, proximaReserva,
-        minutosParaReserva, enPreparacion, porLiberar, revisarAgendas
+        minutosParaReserva, enPreparacion, porLiberar, revisarAgendas,
+        estadoVisual
     }
 }, {
     persist: true

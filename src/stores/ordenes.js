@@ -36,23 +36,24 @@ export const useOrdenesStore = defineStore('ordenes', () => {
             .sort((a, b) => new Date(b.hora_cierre) - new Date(a.hora_cierre))
     )
 
-    function abrirOrden(mesaId) {
-        const mesasStore = useMesasStore()
-        const existente = ordenAbiertaDeMesa.value(mesaId)
-        if (existente) return existente
+    function abrirOrden(mesaId, atendidoPor = null) {
+    const mesasStore = useMesasStore()
+    const existente = ordenAbiertaDeMesa.value(mesaId)
+    if (existente) return existente
 
-        const orden = {
-            id: siguienteId(ordenes.value),
-            mesa_id: Number(mesaId),
-            hora_apertura: new Date().toISOString(),
-            hora_cierre: null,
-            estado: ESTADOS_ORDEN.ABIERTA,
-            total_final: 0
-        }
-        ordenes.value.push(orden)
-        mesasStore.marcarOcupada(mesaId)
-        return orden
+    const orden = {
+        id: siguienteId(ordenes.value),
+        mesa_id: Number(mesaId),
+        atendido_por: atendidoPor,
+        hora_apertura: new Date().toISOString(),
+        hora_cierre: null,
+        estado: ESTADOS_ORDEN.ABIERTA,
+        total_final: 0
     }
+    ordenes.value.push(orden)
+    mesasStore.marcarOcupada(mesaId)
+    return orden
+}
 
     function agregarItem(ordenId, producto, cantidad = 1) {
         const orden = obtenerOrdenPorId.value(ordenId)
@@ -118,10 +119,41 @@ export const useOrdenesStore = defineStore('ordenes', () => {
     ordenes.value = ordenes.value.filter((o) => o.id !== orden.id)
     mesasStore.liberarMesa(orden.mesa_id)
 }
-    return {
+
+function snapshotOrdenesCerradas() {
+        const mesasStore = useMesasStore()
+        return ordenes.value
+            .filter((o) => o.estado === ESTADOS_ORDEN.CERRADA)
+            .map((o) => ({
+                id: o.id,
+                mesa_numero: mesasStore.obtenerPorId(o.mesa_id)?.numero ?? null,
+                atendido_por: o.atendido_por || 'Sin registrar',
+                hora_apertura: o.hora_apertura,
+                hora_cierre: o.hora_cierre,
+                total_final: o.total_final,
+                items: itemsDeOrden.value(o.id).map((it) => ({
+                    nombre_producto: it.nombre_producto,
+                    precio_unitario: it.precio_unitario,
+                    cantidad: it.cantidad
+                }))
+            }))
+    }
+
+    function archivarOrdenesDelDia() {
+        const snapshot = snapshotOrdenesCerradas()
+        const idsCerradas = new Set(
+            ordenes.value.filter((o) => o.estado === ESTADOS_ORDEN.CERRADA).map((o) => o.id)
+        )
+        items.value = items.value.filter((it) => !idsCerradas.has(it.orden_id))
+        ordenes.value = ordenes.value.filter((o) => !idsCerradas.has(o.id))
+        return snapshot
+    }
+
+        return {
         ordenes, items,
         obtenerOrdenPorId, ordenAbiertaDeMesa, itemsDeOrden, subtotalDeOrden, ordenesCerradas,
-        abrirOrden, agregarItem, cambiarCantidad, quitarItem, pedirCuenta, cobrarYLiberar,cancelarOrden
+        abrirOrden, agregarItem, cambiarCantidad, quitarItem, pedirCuenta, cobrarYLiberar, cancelarOrden,
+        archivarOrdenesDelDia
     }
 }, {
     persist: true

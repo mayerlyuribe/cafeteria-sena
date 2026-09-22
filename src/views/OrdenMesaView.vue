@@ -8,7 +8,7 @@
           <q-btn flat round dense icon="arrow_back" @click="$router.push('/')" />
           <div class="text-h5 page-title q-ml-sm">Mesa {{ mesa.numero }}</div>
           <q-badge :color="orden ? 'negative' : 'positive'" class="q-ml-md">
-            {{ orden ? '🔴 Ocupada' : '🟢 Libre' }}
+            {{ orden ? 'Ocupada' : 'Libre' }}
           </q-badge>
           <q-space />
           <div v-if="orden" class="text-caption text-grey-7">
@@ -123,7 +123,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { useMesasStore, useOrdenesStore, useProductosStore, useDiaStore } from '../stores/stores.js'
+import { useMesasStore, useOrdenesStore, useProductosStore, useDiaStore, useAuthStore } from '../stores/stores.js'
 const props = defineProps({ id: { type: [String, Number], required: true } })
 
 const router = useRouter()
@@ -133,12 +133,14 @@ const mesasStore = useMesasStore()
 const ordenesStore = useOrdenesStore()
 const productosStore = useProductosStore()
 const diaStore = useDiaStore()
+const authStore = useAuthStore()
 
 const dialogoAgregar = ref(false)
 const dialogoCancelar = ref(false)
 
 const mesa = computed(() => mesasStore.obtenerPorId(props.id))
-const orden = computed(() => ordenesStore.ordenAbiertaDeMesa(props.id))
+const orden 
+= computed(() => ordenesStore.ordenAbiertaDeMesa(props.id))
 const items = computed(() => (orden.value ? ordenesStore.itemsDeOrden(orden.value.id) : []))
 const subtotal = computed(() => (orden.value ? ordenesStore.subtotalDeOrden(orden.value.id) : 0))
 
@@ -147,7 +149,7 @@ function ocuparMesa() {
     $q.notify({ type: 'negative', message: 'El dia esta cerrado. No se pueden abrir nuevas ordenes.' })
     return
   }
-  ordenesStore.abrirOrden(mesa.value.id)
+  ordenesStore.abrirOrden(mesa.value.id, authStore.currentUser?.nombre)
   $q.notify({ type: 'positive', message: `Mesa ${mesa.value.numero} ocupada`, timeout: 900 })
 }
 

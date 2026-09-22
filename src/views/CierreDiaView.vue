@@ -1,8 +1,9 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="row items-center q-mb-md">
-      <div class="text-h5 page-title">Cierre del dia (admin)</div>
+    <div class="row items-center q-mb-md q-gutter-sm">
+      <div class="text-h5 page-title">Cierre del dia </div>
       <q-space />
+      <q-btn flat color="primary" icon="history" label="Historial" @click="$router.push({ name: 'historial' })" />
       <q-btn
         v-if="!diaStore.diaCerrado"
         color="negative"
@@ -18,19 +19,6 @@
         label="Iniciar nuevo dia"
         @click="diaStore.iniciarNuevoDia(authStore.currentUser?.nombre)"
       />
-    </div>
-
-    <div class="row q-col-gutter-sm q-mb-md">
-      <div class="col-auto">
-        <q-chip icon="login" color="grey-3" text-color="dark">
-          Abrio el dia: <strong class="q-ml-xs">{{ diaStore.abierto_por || 'Sin registrar' }}</strong>
-        </q-chip>
-      </div>
-      <div class="col-auto">
-        <q-chip icon="logout" color="grey-3" text-color="dark">
-          Cerro el dia: <strong class="q-ml-xs">{{ diaStore.cerrado_por || '—' }}</strong>
-        </q-chip>
-      </div>
     </div>
 
     <div class="row q-col-gutter-md q-mb-lg">
@@ -79,6 +67,7 @@
           <q-item-label>Mesa {{ mesasStore.obtenerPorId(orden.mesa_id)?.numero ?? '—' }}</q-item-label>
           <q-item-label caption>
             {{ formatearHora(orden.hora_apertura) }} → {{ formatearHora(orden.hora_cierre) }}
+            <span v-if="orden.atendido_por"> · Atendio: {{ orden.atendido_por }}</span>
           </q-item-label>
         </q-item-section>
         <q-item-section side class="text-weight-bold">
@@ -90,43 +79,7 @@
       </q-item>
     </q-list>
 
-    <div class="text-subtitle1 text-weight-bold q-mb-sm">Registro de turnos (quien trabajo hoy)</div>
-    <q-list bordered separator class="q-mb-lg">
-      <q-item v-for="t in authStore.registroTurnos" :key="t.id">
-        <q-item-section avatar>
-          <q-icon :name="t.accion === 'apertura' ? 'login' : 'logout'" :color="t.accion === 'apertura' ? 'positive' : 'grey-7'" />
-        </q-item-section>
-        <q-item-section>
-          <q-item-label>{{ t.usuario }} <q-badge color="grey-5" class="q-ml-xs">{{ t.rol }}</q-badge></q-item-label>
-          <q-item-label caption>
-            {{ t.accion === 'apertura' ? 'Inicio turno' : 'Cerro turno' }} · {{ formatearHora(t.hora) }}
-          </q-item-label>
-        </q-item-section>
-      </q-item>
-      <q-item v-if="!authStore.registroTurnos.length">
-        <q-item-section class="text-grey text-center">Aun no hay turnos registrados.</q-item-section>
-      </q-item>
-    </q-list>
-
-    <div v-if="diaStore.cierres.length">
-      <div class="text-subtitle1 text-weight-bold q-mb-sm">Historial de cierres anteriores</div>
-      <q-list bordered separator>
-        <q-item v-for="c in diaStore.cierres" :key="c.id">
-          <q-item-section>
-            <q-item-label>{{ c.fecha }}</q-item-label>
-            <q-item-label caption>
-              {{ c.cantidadOrdenes }} ordenes · {{ c.mesasAtendidas }} mesas · mas vendido: {{ c.productoMasVendido || '—' }}
-            </q-item-label>
-            <q-item-label caption>
-              Abrio: {{ c.abierto_por || '—' }} · Cerro: {{ c.cerrado_por || '—' }}
-            </q-item-label>
-          </q-item-section>
-          <q-item-section side class="text-weight-bold">
-            {{ formatoMoneda(c.totalRecaudado) }}
-          </q-item-section>
-        </q-item>
-      </q-list>
-    </div>
+  
 
     <q-dialog v-model="confirmarCierre">
       <q-card>

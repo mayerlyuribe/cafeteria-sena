@@ -26,44 +26,28 @@
       <div class="row q-col-gutter-md">
         <div v-for="mesa in mesasStore.mesasVisibles" :key="mesa.id" class="col-12 col-sm-6 col-md-4 col-lg-3">
           <q-card flat bordered class="mesa-card" :class="[
-            `estado-${mesa.estado}`,
+            `estado-${estadoVisualMesa(mesa)}`,
             { 'mesa-card--disabled': mesa.estado === 'libre' && diaStore.diaCerrado },
             { 'mesa-card--agendada': mesa.reservas.length > 0 },
             { 'mesa-card--seleccionada': mesaEstaSeleccionada(mesa.id) }
           ]" @click="alClickearMesa(mesa)">
             <q-card-section class="text-center">
-              <q-checkbox v-if="modoUnion && mesa.estado === 'libre'" class="mesa-checkbox"
-                :model-value="mesaEstaSeleccionada(mesa.id)" @update:model-value="toggleSeleccion(mesa)" @click.stop />
-              <svg viewBox="0 0 100 100" width="72" height="72" role="img"
-                :aria-label="`Mesa ${mesa.numero}, ${mesa.estado}`">
-                <rect v-for="(pos, i) in sillasDeMesa(mesa.capacidad)" :key="i" :x="pos.x - 6" :y="pos.y - 6" width="12"
-                  height="12" rx="3" :fill="colorDeMesa(mesa.estado)" opacity="0.85" />
-                <rect x="28" y="28" width="44" height="44" rx="10" :fill="colorDeMesa(mesa.estado)" stroke="white"
-                  stroke-width="2.5" />
-                <text x="50" y="56" text-anchor="middle" font-size="20" font-weight="700" fill="white"
-                  font-family="Roboto, sans-serif">
-                  {{ mesa.numero }}
-                </text>
-                <g v-if="mesa.reservas.length > 0" transform="translate(72, 2)">
-                  <circle cx="13" cy="13" r="14" fill="#ffffff" stroke="#4A7A9D" stroke-width="1.5" />
-                  <rect x="6" y="9" width="14" height="11" rx="1.5" fill="none" stroke="#4A7A9D" stroke-width="1.6" />
-                  <rect x="6" y="9" width="14" height="4" fill="#4A7A9D" />
-                  <line x1="9.5" y1="6" x2="9.5" y2="11" stroke="#4A7A9D" stroke-width="1.6" stroke-linecap="round" />
-                  <line x1="16.5" y1="6" x2="16.5" y2="11" stroke="#4A7A9D" stroke-width="1.6" stroke-linecap="round" />
-                </g>
-              </svg>
-              <div class="text-h6 q-mt-xs">Mesa {{ mesa.numero }}</div>
-              <div class="text-caption text-grey-8">
+              <q-checkbox v-if="modoUnion && mesa.estado === 'libre' && estadoVisualMesa(mesa) !== RESERVADA"
+                class="mesa-checkbox" :model-value="mesaEstaSeleccionada(mesa.id)"
+                @update:model-value="toggleSeleccion(mesa)" @click.stop />
+              <div class="container accordion-header">
+                <div class="flex">
+                  {{ mesa.es_host_union ? 'Mesas' : 'Mesa' }} {{ numerosDeMesa(mesa) }}
+                </div>
+              </div>
+              <div class="container">
                 <q-icon name="people" size="16px" /> {{ mesa.capacidad }} personas
               </div>
-              <q-badge :color="colorEstado(mesa.estado)" class="q-mt-xs">
-                {{ textoEstado(mesa.estado) }}
-              </q-badge>
-
               <div v-if="mesa.reservas.length > 0" class="text-caption text-info q-mt-xs">
                 <q-icon name="event" size="14px" />
                 {{ mesa.reservas.length === 1 ? '1 reserva' : `${mesa.reservas.length} reservas` }}
-                <span v-if="mesaStore_proxima(mesa)"> · proxima {{ formatearFecha(mesaStore_proxima(mesa).fecha) }} · {{ mesaStore_proxima(mesa).hora }}</span>
+                <span v-if="mesaStore_proxima(mesa)"> · proxima {{ formatearFecha(mesaStore_proxima(mesa).fecha) }} · {{
+                  mesaStore_proxima(mesa).hora }}</span>
               </div>
 
               <div v-if="mesa.es_host_union" class="text-caption text-info q-mt-xs">
@@ -72,10 +56,10 @@
               </div>
 
               <div class="q-mt-sm mesa-card__acciones" @click.stop>
-                <q-btn v-if="mesa.estado === 'libre' && !modoUnion" dense flat size="sm" icon="event"
-                  label="Reservas" color="info" @click="abrirDialogoAgenda(mesa)" />
+                <q-btn v-if="mesa.estado === 'libre' && !modoUnion" dense flat size="sm" icon="event" label="Reservas"
+                  color="info" @click="abrirDialogoAgenda(mesa)" />
 
-                <template v-if="mesa.estado === 'libre' && !modoUnion">
+                <template v-if="mesa.estado === 'libre' && !modoUnion && estadoVisualMesa(mesa) !== RESERVADA">
                   <q-btn dense flat round size="sm" icon="edit" color="grey-8" @click="abrirDialogoEditar(mesa)">
                     <q-tooltip>Editar mesa</q-tooltip>
                   </q-btn>
@@ -139,30 +123,59 @@
 
         <q-separator />
 
-        <q-card-section class="q-gutter-sm">
-          <div class="text-caption text-weight-bold text-grey-7">Nueva reserva</div>
-          <q-input v-model="agenda.cliente" label="Cliente (opcional)" dense outlined />
-          <div class="row q-col-gutter-sm">
+        <q-card-section class="q-pa-md">
+          <div class="row items-center q-mb-md">
+            <q-icon name="event_available" size="24px" color="primary" class="q-mr-sm"  />
+            <div class="text-subtitle1 text-weight-bold">Nueva reserva</div>
+          </div>
+
+          <q-input v-model="agenda.cliente" label="Cliente (opcional)" dense outlined class="q-mb-sm">
+            <template v-slot:prepend>
+              <q-icon name="person" size="20px" color="primary"/>
+            </template>
+          </q-input>
+
+          <div class="row q-col-gutter-sm q-mb-sm">
             <q-input v-model="agenda.fecha" type="date" label="Fecha *" dense outlined stack-label :min="hoyLocal()"
-              class="col-6" />
-            <q-input v-model="agenda.hora" type="time" label="Hora *" dense outlined stack-label class="col-6" />
+              class="col-6">
+              <template v-slot:prepend>
+                <q-icon name="calendar_month" size="20px" color="primary" />
+              </template>
+            </q-input>
+            <q-input v-model="agenda.hora" type="time" label="Hora *" dense outlined stack-label class="col-6">
+              <template v-slot:prepend>
+                <q-icon name="schedule" size="20px" color="primary" />
+              </template>
+            </q-input>
           </div>
-          <div class="text-caption text-grey-7">
-            Horario de atencion: {{ HORA_APERTURA }} a {{ HORA_CIERRE }}. Cada reserva ocupa la mesa
-            {{ MINUTOS_USO_MESA }} min, mas {{ MINUTOS_PREPARACION }} min de limpieza antes de la siguiente.
-          </div>
-          <q-input v-model="agenda.notas" label="Notas (opcional)" dense outlined type="textarea" autogrow />
+
+          <q-banner dense class="bg-principal text-grey-8 rounded-borders q-mb-sm" style="font-size: 12px;">
+            <template v-slot:avatar>
+              <q-icon name="info" color="primary" size="18px" />
+            </template>
+            Horario de atención: {{ HORA_APERTURA }} a {{ HORA_CIERRE }}. Cada reserva ocupa la mesa
+            {{ MINUTOS_USO_MESA }} min, más {{ MINUTOS_PREPARACION }} min de limpieza antes de la siguiente.
+          </q-banner>
+
+          <q-input v-model="agenda.notas" label="Notas (opcional)" dense outlined type="textarea" row="2">
+            <template v-slot:prepend>
+              <q-icon name="notes" size="20px" color="primary" />
+            </template>
+          </q-input>
         </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Cerrar" v-close-popup />
-          <q-btn flat color="info" label="Guardar reserva" @click="guardarAgenda" />
+
+        <q-separator />
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cerrar" color="grey-7" v-close-popup />
+          <q-btn unelevated color="primary" label="Guardar reserva" icon="event_available" @click="guardarAgenda" />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <q-dialog v-model="dialogoNuevaMesa">
       <q-card style="width: 320px">
-        <q-card-section class="text-h6">Nueva mesa</q-card-section>
+        <q-card-section class="text-h5">Nueva mesa</q-card-section>
         <q-card-section class="q-gutter-sm">
           <q-input v-model.number="nuevaMesa.numero" type="number" label="Numero de mesa" dense outlined />
           <q-input v-model.number="nuevaMesa.capacidad" type="number" label="Capacidad" :max="CAPACIDAD_MAXIMA_MESA"
@@ -177,7 +190,7 @@
 
     <q-dialog v-model="dialogoEditar">
       <q-card style="width: 320px">
-        <q-card-section class="text-h6">Editar mesa {{ mesaAEditar?.numero }}</q-card-section>
+        <q-card-section class="text-h5">Editar mesa {{ mesaAEditar?.numero }}</q-card-section>
         <q-card-section class="q-gutter-sm">
           <q-input v-model.number="mesaEditada.numero" type="number" label="Numero de mesa" dense outlined />
           <q-input v-model.number="mesaEditada.capacidad" type="number" label="Capacidad" :max="CAPACIDAD_MAXIMA_MESA"
@@ -206,7 +219,8 @@ import {
   HORA_APERTURA,
   HORA_CIERRE,
   MINUTOS_USO_MESA,
-  MINUTOS_PREPARACION
+  MINUTOS_PREPARACION,
+  RESERVADA
 } from '../stores/stores.js'
 
 const router = useRouter()
@@ -226,6 +240,10 @@ const agenda = ref({ cliente: '', fecha: '', hora: '', notas: '' })
 const reservasDeMesaAAgendar = computed(() =>
   mesaAAgendar.value ? mesasStore.reservasOrdenadas(mesaAAgendar.value) : []
 )
+
+function estadoVisualMesa(mesa) {
+  return mesasStore.estadoVisual(mesa)
+}
 
 function mesaStore_proxima(mesa) {
   return mesasStore.proximaReserva(mesa)
@@ -338,25 +356,27 @@ function toggleSeleccion(mesa) {
 
 function confirmarUnion() {
   const ids = mesasSeleccionadas.value.map((m) => m.id)
+  const numeros = mesasSeleccionadas.value.map((m) => m.numero).sort((a, b) => a - b)
   const resultado = mesasStore.unirMesas(ids)
   if (!resultado.ok) {
     $q.notify({ type: 'negative', message: resultado.mensaje })
     return
   }
-  $q.notify({ type: 'positive', message: 'Mesas unidas correctamente' })
+  $q.notify({ type: 'positive', message: `Mesas ${numeros.join(', ')} unidas correctamente` })
   modoUnion.value = false
   mesasSeleccionadas.value = []
 }
 
 function alClickearMesa(mesa) {
   if (modoUnion.value) {
-    if (mesa.estado !== 'libre') {
-      $q.notify({ type: 'warning', message: 'Solo puedes unir mesas libres.' })
+    if (mesa.estado !== 'libre' || estadoVisualMesa(mesa) === RESERVADA) {
+      $q.notify({ type: 'warning', message: 'Solo puedes unir mesas libres y sin una reserva a punto de llegar.' })
       return
     }
     toggleSeleccion(mesa)
     return
   }
+
   if (mesa.estado === 'unida') {
     const host = mesasStore.mesas.find((m) => m.union_id === mesa.union_id && m.es_host_union)
     $q.notify({ type: 'info', message: host ? `Esta mesa esta unida a la Mesa ${host.numero}.` : 'Esta mesa esta unida a otra.' })
@@ -368,6 +388,19 @@ function alClickearMesa(mesa) {
 function formatearFecha(iso) {
   const [anio, mes, dia] = iso.split('-')
   return `${dia}/${mes}/${anio}`
+}
+
+function numerosDeMesa(mesa) {
+  if (!mesa.es_host_union) return mesa.numero
+
+  const numeros = [
+    mesa.numero,
+    ...(mesa.mesas_unidas || [])
+      .map((mesaId) => mesasStore.obtenerPorId(mesaId)?.numero)
+      .filter((numero) => numero != null)
+  ]
+
+  return numeros.sort((a, b) => a - b).join(', ')
 }
 
 function abrirDialogoAgenda(mesa) {
@@ -405,14 +438,17 @@ function confirmarCancelarReserva(reserva) {
 }
 
 const COLORES_MESA = {
-  libre: '#2E7D5B',
-  ocupada: '#C0392B',
+  libre: '#578c54',
+  ocupada: '#964273',
   por_cobrar: '#E0A537',
-  unida: '#9E9E9E'
+  unida: '#9E9E9E',
+  host_union: '#394493',
+  reservada: '#3793B0'
 }
 
-function colorDeMesa(estado) {
-  return COLORES_MESA[estado] || '#9E9E9E'
+function colorDeMesa(mesa) {
+  if (mesa.es_host_union) return COLORES_MESA.host_union
+  return COLORES_MESA[estadoVisualMesa(mesa)] || '#9E9E9E'
 }
 
 function sillasDeMesa(capacidad) {
@@ -434,6 +470,7 @@ function colorEstado(estado) {
   if (estado === 'libre') return 'positive'
   if (estado === 'ocupada') return 'negative'
   if (estado === 'unida') return 'grey-7'
+  if (estado === RESERVADA) return 'info'
   return 'warning'
 }
 
@@ -441,8 +478,10 @@ function textoEstado(estado) {
   if (estado === 'libre') return 'Libre'
   if (estado === 'ocupada') return 'Ocupada'
   if (estado === 'unida') return 'Unida'
+  if (estado === RESERVADA) return 'Reservada'
   return 'Por cobrar'
 }
+
 
 function irAMesa(mesa) {
   if (mesa.estado === 'libre') {
@@ -527,5 +566,18 @@ function crearMesa() {
   top: 4px;
   left: 4px;
   z-index: 2;
+}
+
+.mesa-card__recuadro {
+  width: 100px;
+  height: 60px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
 }
 </style>

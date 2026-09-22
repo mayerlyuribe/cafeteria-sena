@@ -37,17 +37,39 @@ export const useDiaStore = defineStore('dia', () => {
         return { totalRecaudado, mesasAtendidas, ticketPromedio, productoMasVendido, cantidadOrdenes: cerradas.length }
     })
 
-    function cerrarDia(nombreUsuario) {
+        function cerrarDia(nombreUsuario) {
+        const ordenesStore = useOrdenesStore()
         const resumen = resumenDelDia.value
+        const ordenesDelDia = ordenesStore.archivarOrdenesDelDia()
+
         cerrado_por.value = nombreUsuario || null
         cierres.value.unshift({
             id: siguienteId(cierres.value),
             fecha: fechaInicioDia.value,
             abierto_por: abierto_por.value,
             cerrado_por: cerrado_por.value,
-            ...resumen
+            ...resumen,
+            ordenes: ordenesDelDia
         })
         diaCerrado.value = true
+    }
+
+    function buscarOrdenesEnHistorial(texto) {
+        const q = (texto || '').trim().toLowerCase()
+        if (!q) return []
+
+        const resultados = []
+        for (const cierre of cierres.value) {
+            for (const orden of cierre.ordenes || []) {
+                const coincideMesa = String(orden.mesa_numero).includes(q)
+                const coincideAtendio = orden.atendido_por.toLowerCase().includes(q)
+                const coincideProducto = orden.items.some((it) => it.nombre_producto.toLowerCase().includes(q))
+                if (coincideMesa || coincideAtendio || coincideProducto) {
+                    resultados.push({ ...orden, fecha: cierre.fecha })
+                }
+            }
+        }
+        return resultados
     }
 
     function iniciarNuevoDia(nombreUsuario) {
@@ -57,10 +79,11 @@ export const useDiaStore = defineStore('dia', () => {
         cerrado_por.value = null
     }
 
-    return {
+       return {
         diaCerrado, fechaInicioDia, abierto_por, cerrado_por, cierres,
-        resumenDelDia, cerrarDia, iniciarNuevoDia
+        resumenDelDia, cerrarDia, iniciarNuevoDia, buscarOrdenesEnHistorial
     }
+    
 }, {
     persist: true
 })

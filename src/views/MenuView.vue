@@ -17,7 +17,6 @@
           <q-item-section side>
             <div class="row items-center q-gutter-sm">
               <q-toggle
-                v-model="p.disponible"
                 color="positive"
                 @update:model-value="productosStore.toggleDisponibilidad(p.id)"
                 :model-value="p.disponible"
