@@ -11,6 +11,7 @@ export const ESTADOS_MESA = {
 
 export const RESERVADA = 'reservada'
 
+
 export const CAPACIDAD_MAXIMA_MESA = 4
 export const CAPACIDAD_MAXIMA_UNION = 12
 

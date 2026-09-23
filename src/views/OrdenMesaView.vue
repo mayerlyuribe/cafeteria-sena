@@ -9,6 +9,7 @@
           <div class="text-h5 page-title q-ml-sm">Mesa {{ mesa.numero }}</div>
           <q-badge :color="orden ? 'negative' : 'positive'" class="q-ml-md">
             {{ orden ? 'Ocupada' : 'Libre' }}
+
           </q-badge>
           <q-space />
           <div v-if="orden" class="text-caption text-grey-7">

@@ -92,7 +92,6 @@ function cerrarSesion() {
   router.push({ name: 'login' })
 }
 </script>
-
 <style scoped>
 .logo {
   width: 100px;
