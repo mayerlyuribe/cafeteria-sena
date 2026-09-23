@@ -5,7 +5,7 @@
         <q-btn flat dense round icon="menu" class="lt-md" @click="drawerAbierto = !drawerAbierto" />
         <q-img src="/src/assets/logo.png" alt="Logo" class="logo" />
         <q-toolbar-title class="page-title">
-          <p class="text-h4" style="font-family: 'Times New Roman';">Cafetería pinkipai</p>
+          <p class="text-h4">CafeterIA pinkipai</p>
         </q-toolbar-title>
 
         <q-chip
@@ -27,7 +27,7 @@
         <q-separator vertical dark class="q-mx-sm gt-xs" />
 
         <q-btn flat no-caps class="gt-xs">
-          <q-avatar size="35px" text-color="white" class="q-mr-sm" icon="face">
+          <q-avatar size="35px" color="secondary" text-color="white" class="q-mr-sm" icon="face">
           </q-avatar>
           <span class="text-h6">{{ authStore.currentUser?.nombre }}</span>
           <q-menu>
@@ -84,7 +84,6 @@ const drawerAbierto = ref(false)
 const diaStore = useDiaStore()
 const authStore = useAuthStore()
 
-const inicial = computed(() => authStore.currentUser?.nombre?.charAt(0)?.toUpperCase() || '?')
 const rolTexto = computed(() => (authStore.esAdmin ? 'Admin' : 'Empleado'))
 
 function cerrarSesion() {
@@ -92,6 +91,7 @@ function cerrarSesion() {
   router.push({ name: 'login' })
 }
 </script>
+
 <style scoped>
 .logo {
   width: 100px;

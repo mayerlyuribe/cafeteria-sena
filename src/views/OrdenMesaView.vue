@@ -8,8 +8,7 @@
           <q-btn flat round dense icon="arrow_back" @click="$router.push('/')" />
           <div class="text-h5 page-title q-ml-sm">Mesa {{ mesa.numero }}</div>
           <q-badge :color="orden ? 'negative' : 'positive'" class="q-ml-md">
-            {{ orden ? 'Ocupada' : 'Libre' }}
-
+            {{ orden ? '🔴 Ocupada' : '🟢 Libre' }}
           </q-badge>
           <q-space />
           <div v-if="orden" class="text-caption text-grey-7">
@@ -91,7 +90,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="dialogoAgregar">
+    <q-dialog v-model="dialogoAgregar" persistent>
       <q-card style="width: 420px; max-width: 90vw">
         <q-card-section class="text-h6">Agregar producto</q-card-section>
         <q-card-section>
@@ -125,6 +124,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useMesasStore, useOrdenesStore, useProductosStore, useDiaStore, useAuthStore } from '../stores/stores.js'
+import { formatoMoneda, formatearHora} from '../stores/utils.js'
 const props = defineProps({ id: { type: [String, Number], required: true } })
 
 const router = useRouter()
@@ -140,8 +140,7 @@ const dialogoAgregar = ref(false)
 const dialogoCancelar = ref(false)
 
 const mesa = computed(() => mesasStore.obtenerPorId(props.id))
-const orden 
-= computed(() => ordenesStore.ordenAbiertaDeMesa(props.id))
+const orden = computed(() => ordenesStore.ordenAbiertaDeMesa(props.id))
 const items = computed(() => (orden.value ? ordenesStore.itemsDeOrden(orden.value.id) : []))
 const subtotal = computed(() => (orden.value ? ordenesStore.subtotalDeOrden(orden.value.id) : 0))
 
@@ -174,14 +173,7 @@ function pedirCuenta() {
   router.push({ name: 'cobro', params: { id: mesa.value.id } })
 }
 
-function formatoMoneda(valor) {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(valor || 0)
-}
 
-function formatearHora(iso) {
-  if (!iso) return '-'
-  return new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
-}
 </script>
 
 <style scoped>

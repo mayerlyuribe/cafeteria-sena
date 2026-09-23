@@ -1,7 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { useDiaStore } from './dia.js'
-import { siguienteId } from './utils.js'
 
 const USUARIOS = [
     { id: 1, nombre: 'Administrador', usuario: 'admin', clave: 'admin123', rol: 'admin' },
@@ -12,7 +10,6 @@ const USUARIOS = [
 
 export const useAuthStore = defineStore('auth', () => {
     const currentUser = ref(null)
-    const registroTurnos = ref([])
 
     const estaAutenticado = computed(() => !!currentUser.value)
     const esAdmin = computed(() => currentUser.value?.rol === 'admin')
@@ -32,36 +29,14 @@ export const useAuthStore = defineStore('auth', () => {
             rol: encontrado.rol
         }
 
-        registroTurnos.value.unshift({
-            id: siguienteId(registroTurnos.value),
-            usuario: encontrado.nombre,
-            rol: encontrado.rol,
-            accion: 'apertura',
-            hora: new Date().toISOString()
-        })
-
-        const diaStore = useDiaStore()
-        if (!diaStore.abierto_por) {
-            diaStore.abierto_por = encontrado.nombre
-        }
-
         return { ok: true }
     }
 
     function logout() {
-        if (currentUser.value) {
-            registroTurnos.value.unshift({
-                id: siguienteId(registroTurnos.value),
-                usuario: currentUser.value.nombre,
-                rol: currentUser.value.rol,
-                accion: 'cierre',
-                hora: new Date().toISOString()
-            })
-        }
         currentUser.value = null
     }
 
-    return { currentUser, registroTurnos, estaAutenticado, esAdmin, login, logout }
+    return { currentUser, estaAutenticado, esAdmin, login, logout }
 }, {
     persist: true
 })

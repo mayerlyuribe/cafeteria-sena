@@ -17,9 +17,10 @@
           <q-item-section side>
             <div class="row items-center q-gutter-sm">
               <q-toggle
-                color="positive"
-                @update:model-value="productosStore.toggleDisponibilidad(p.id)"
+              color="positive"
                 :model-value="p.disponible"
+                @update:model-value="productosStore.toggleDisponibilidad(p.id)"
+                
               />
               <q-btn dense flat round icon="edit" @click="abrirDialogoEditar(p)" />
               <q-btn dense flat round icon="delete" color="negative" @click="eliminar(p)" />
@@ -33,7 +34,7 @@
       No hay productos registrados todavia.
     </q-banner>
 
-    <q-dialog v-model="dialogoAbierto">
+    <q-dialog v-model="dialogoAbierto" persistent>
       <q-card style="width: 380px; max-width: 90vw">
         <q-card-section class="text-h6">
           {{ editando ? 'Editar producto' : 'Nuevo producto' }}
@@ -63,6 +64,8 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useProductosStore } from '../stores/stores.js'
+import { CATEGORIA_MENU } from '../stores/productos.js'
+import { formatoMoneda } from '../stores/utils.js'
 
 const productosStore = useProductosStore()
 
@@ -70,9 +73,8 @@ const dialogoAbierto = ref(false)
 const editando = ref(null)
 const form = ref({ nombre: '', categoria: '', precio_actual: null })
 
-const categoriasDisponibles = computed(() =>
-  Object.keys(productosStore.porCategoria)
-)
+const categoriasDisponibles = ref(CATEGORIA_MENU)
+
 
 function crearCategoria(val, done) {
   done(val, 'add-unique')
@@ -103,7 +105,5 @@ function eliminar(producto) {
   productosStore.eliminarProducto(producto.id)
 }
 
-function formatoMoneda(valor) {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(valor || 0)
-}
+
 </script>

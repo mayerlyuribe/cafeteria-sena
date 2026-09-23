@@ -37,23 +37,23 @@ export const useOrdenesStore = defineStore('ordenes', () => {
     )
 
     function abrirOrden(mesaId, atendidoPor = null) {
-    const mesasStore = useMesasStore()
-    const existente = ordenAbiertaDeMesa.value(mesaId)
-    if (existente) return existente
+        const mesasStore = useMesasStore()
+        const existente = ordenAbiertaDeMesa.value(mesaId)
+        if (existente) return existente
 
-    const orden = {
-        id: siguienteId(ordenes.value),
-        mesa_id: Number(mesaId),
-        atendido_por: atendidoPor,
-        hora_apertura: new Date().toISOString(),
-        hora_cierre: null,
-        estado: ESTADOS_ORDEN.ABIERTA,
-        total_final: 0
+        const orden = {
+            id: siguienteId(ordenes.value),
+            mesa_id: Number(mesaId),
+            atendido_por: atendidoPor,
+            hora_apertura: new Date().toISOString(),
+            hora_cierre: null,
+            estado: ESTADOS_ORDEN.ABIERTA,
+            total_final: 0
+        }
+        ordenes.value.push(orden)
+        mesasStore.marcarOcupada(mesaId)
+        return orden
     }
-    ordenes.value.push(orden)
-    mesasStore.marcarOcupada(mesaId)
-    return orden
-}
 
     function agregarItem(ordenId, producto, cantidad = 1) {
         const orden = obtenerOrdenPorId.value(ordenId)
@@ -119,8 +119,9 @@ export const useOrdenesStore = defineStore('ordenes', () => {
     ordenes.value = ordenes.value.filter((o) => o.id !== orden.id)
     mesasStore.liberarMesa(orden.mesa_id)
 }
-
-function snapshotOrdenesCerradas() {
+    // Arma una "foto" de cada orden cerrada (mesa, quien atendio, que pidieron)
+    // para guardarla en el historial del dia antes de vaciar la lista activa.
+    function snapshotOrdenesCerradas() {
         const mesasStore = useMesasStore()
         return ordenes.value
             .filter((o) => o.estado === ESTADOS_ORDEN.CERRADA)
@@ -139,6 +140,8 @@ function snapshotOrdenesCerradas() {
             }))
     }
 
+    // Guarda el snapshot de las ordenes cerradas y limpia la lista activa
+    // (y sus items) para que el dia siguiente arranque en ceros.
     function archivarOrdenesDelDia() {
         const snapshot = snapshotOrdenesCerradas()
         const idsCerradas = new Set(
@@ -149,7 +152,7 @@ function snapshotOrdenesCerradas() {
         return snapshot
     }
 
-        return {
+    return {
         ordenes, items,
         obtenerOrdenPorId, ordenAbiertaDeMesa, itemsDeOrden, subtotalDeOrden, ordenesCerradas,
         abrirOrden, agregarItem, cambiarCantidad, quitarItem, pedirCuenta, cobrarYLiberar, cancelarOrden,

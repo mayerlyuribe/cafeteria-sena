@@ -23,8 +23,7 @@ const routes = [
             { path: "mesa/:id/cobro", name: "cobro", component: CobroView, props: true },
             { path: "menu", name: "menu", component: MenuView, meta: { requiresAdmin: true } },
             { path: "cierre", name: "cierre", component: CierreDiaView, meta: { requiresAdmin: true } },
-{ path: "historial", name: "historial", component: HistorialView, meta: { requiresAdmin: true }
-}
+            { path: "historial", name: "historial", component: HistorialView, meta: { requiresAdmin: true } }
         ]
     },
     { path: "/:catchAll(.*)*", name: "not-found", component: ErrorNotFoundView }

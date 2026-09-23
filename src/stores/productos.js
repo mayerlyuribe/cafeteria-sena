@@ -2,6 +2,15 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { siguienteId } from './utils.js'
 
+export const CATEGORIA_MENU = ['Bebidas', 'Comidas', 'Postres']
+
+function normalizarCategoria(categoria) {
+    const limpio = (categoria || '').trim()
+    const encontrada = CATEGORIA_MENU.find(
+        (c) => c.toLowerCase() == limpio.toLowerCase()
+    )
+    return encontrada || limpio
+}
 
 export const useProductosStore = defineStore('productos', () => {
     const productos = ref([
@@ -10,16 +19,20 @@ export const useProductosStore = defineStore('productos', () => {
         { id: 3, nombre: 'Arepa con queso', categoria: 'Comidas', precio_actual: 5000, disponible: true },
         { id: 4, nombre: 'Bandeja paisa', categoria: 'Comidas', precio_actual: 22000, disponible: true },
         { id: 5, nombre: 'Tres leches', categoria: 'Postres', precio_actual: 8000, disponible: false },
-        { id: 6, nombre: 'arro com chicle', categoria: 'comidas', precio_actual: 20000, disponible: false }
+        { id: 6, nombre: 'arro com chicle', categoria: 'Comidas', precio_actual: 15000, disponible: false }
     ])
 
     const disponibles = computed(() => productos.value.filter((p) => p.disponible))
 
     const porCategoria = computed(() => {
         const grupos = {}
+
+        CATEGORIA_MENU.forEach((c) => { grupos[c] = [] })
+
         for (const p of productos.value) {
-            if (!grupos[p.categoria]) grupos[p.categoria] = []
-            grupos[p.categoria].push(p)
+            const cat = normalizarCategoria(p.categoria)
+            if (!grupos[cat]) grupos[cat] = []
+            grupos[cat].push(p)
         }
         return grupos
     })
@@ -30,7 +43,7 @@ export const useProductosStore = defineStore('productos', () => {
         productos.value.push({
             id: siguienteId(productos.value),
             nombre,
-            categoria,
+            categoria: normalizarCategoria(categoria),
             precio_actual: Number(precio_actual),
             disponible: true
         })
@@ -40,7 +53,7 @@ export const useProductosStore = defineStore('productos', () => {
         const p = productos.value.find((x) => x.id === id)
         if (!p) return
         if (cambios.nombre !== undefined) p.nombre = cambios.nombre
-        if (cambios.categoria !== undefined) p.categoria = cambios.categoria
+        if (cambios.categoria !== undefined) p.categoria = normalizarCategoria(cambios.categoria)
         if (cambios.precio_actual !== undefined) p.precio_actual = Number(cambios.precio_actual)
     }
 

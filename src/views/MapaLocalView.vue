@@ -1,5 +1,4 @@
 <template>
-
   <q-page class="q-pa-md page-shell">
     <div class="page-container">
       <div class="row items-center q-mb-md q-gutter-sm">
@@ -27,55 +26,33 @@
       <div class="row q-col-gutter-md">
         <div v-for="mesa in mesasStore.mesasVisibles" :key="mesa.id" class="col-12 col-sm-6 col-md-4 col-lg-3">
           <q-card flat bordered class="mesa-card" :class="[
-            `estado-${mesa.estado}`,
+            `estado-${estadoVisualMesa(mesa)}`,
             { 'mesa-card--disabled': mesa.estado === 'libre' && diaStore.diaCerrado },
             { 'mesa-card--agendada': mesa.reservas.length > 0 },
             { 'mesa-card--seleccionada': mesaEstaSeleccionada(mesa.id) }
           ]" @click="alClickearMesa(mesa)">
             <q-card-section class="text-center">
-              <q-checkbox v-if="modoUnion && mesa.estado === 'libre'" class="mesa-checkbox"
-                :model-value="mesaEstaSeleccionada(mesa.id)" @update:model-value="toggleSeleccion(mesa)" @click.stop />
-              <svg viewBox="0 0 100 100" width="72" height="72" role="img"
-                :aria-label="`Mesa ${mesa.numero}, ${mesa.estado}`">
-                <rect v-for="(pos, i) in sillasDeMesa(mesa.capacidad)" :key="i" :x="pos.x - 6" :y="pos.y - 6" width="12"
-                  height="12" rx="3" :fill="colorDeMesa(mesa.estado)" opacity="0.85" />
-                <rect x="28" y="28" width="44" height="44" rx="10" :fill="colorDeMesa(mesa.estado)" stroke="white"
-                  stroke-width="2.5" />
-                <text x="50" y="56" text-anchor="middle" font-size="20" font-weight="700" fill="white"
-                  font-family="Roboto, sans-serif">
-                  {{ mesa.numero }}
-                </text>
-                <g v-if="mesa.reservas.length > 0" transform="translate(72, 2)">
-                  <circle cx="13" cy="13" r="14" fill="#ffffff" stroke="#4A7A9D" stroke-width="1.5" />
-                  <rect x="6" y="9" width="14" height="11" rx="1.5" fill="none" stroke="#4A7A9D" stroke-width="1.6" />
-                  <rect x="6" y="9" width="14" height="4" fill="#4A7A9D" />
-                  <line x1="9.5" y1="6" x2="9.5" y2="11" stroke="#4A7A9D" stroke-width="1.6" stroke-linecap="round" />
-                  <line x1="16.5" y1="6" x2="16.5" y2="11" stroke="#4A7A9D" stroke-width="1.6" stroke-linecap="round" />
-                </g>
-              </svg>
-              <div class="text-h6 q-mt-xs">Mesa {{ mesa.numero }}</div>
-              <div class="text-caption text-grey-8">
+              <q-checkbox v-if="modoUnion && mesa.estado === 'libre' && estadoVisualMesa(mesa) !== RESERVADA"
+                class="mesa-checkbox" :model-value="mesaEstaSeleccionada(mesa.id)"
+                @update:model-value="toggleSeleccion(mesa)" @click.stop />
+              <div class="container">
+                <div class="container">
+                  <div class="mesa-card__recuadro" :style="{ backgroundColor: colorDeMesa(mesa) }">
+                    Mesa {{ mesa.numero }}{{ mesa.es_host_union ? ` · ${formatoListaNumeros(numerosMesasUnidas(mesa))}`
+                    : ''
+                    }}
+                  </div>
+                </div>
+              </div>
+              <div class="container">
                 <q-icon name="people" size="16px" /> {{ mesa.capacidad }} personas
-              </div>
-              <q-badge :color="colorEstado(mesa.estado)" class="q-mt-xs">
-                {{ textoEstado(mesa.estado) }}
-              </q-badge>
-              <div v-if="mesa.reservas.length > 0" class="text-caption text-info q-mt-xs">
-                <q-icon name="event" size="14px" />
-                {{ mesa.reservas.length === 1 ? '1 reserva' : `${mesa.reservas.length} reservas` }}
-                <span v-if="mesaStore_proxima(mesa)"> · proxima {{ formatearFecha(mesaStore_proxima(mesa).fecha) }} · {{ mesaStore_proxima(mesa).hora }}</span>
-              </div>
-
-              <div v-if="mesa.es_host_union" class="text-caption text-info q-mt-xs">
-                <q-icon name="call_merge" size="14px" />
-                Union de {{ 1 + mesa.mesas_unidas.length }} mesas
               </div>
 
               <div class="q-mt-sm mesa-card__acciones" @click.stop>
-                <q-btn v-if="mesa.estado === 'libre' && !modoUnion" dense flat size="sm" icon="event"
-                  label="Reservas" color="info" @click="abrirDialogoAgenda(mesa)" />
+                <q-btn v-if="mesa.estado === 'libre' && !modoUnion" dense flat size="sm" icon="event" label="Reservas"
+                  color="info" @click="abrirDialogoAgenda(mesa)" />
 
-                <template v-if="mesa.estado === 'libre' && !modoUnion">
+                <template v-if="mesa.estado === 'libre' && !modoUnion && estadoVisualMesa(mesa) !== RESERVADA">
                   <q-btn dense flat round size="sm" icon="edit" color="grey-8" @click="abrirDialogoEditar(mesa)">
                     <q-tooltip>Editar mesa</q-tooltip>
                   </q-btn>
@@ -104,7 +81,7 @@
     </div>
 
     <!-- ---------------------- Dialogo: sistema de reservacion ---------------------- -->
-    <q-dialog v-model="dialogoAgenda">
+    <q-dialog v-model="dialogoAgenda" persistent>
       <q-card style="width: 420px; max-width: 94vw">
         <q-card-section class="text-h6">
           Reservas — Mesa {{ mesaAAgendar?.numero }}
@@ -201,12 +178,14 @@ import {
   useMesasStore,
   useOrdenesStore,
   useDiaStore,
+  useAuthStore,
   CAPACIDAD_MAXIMA_MESA,
   CAPACIDAD_MAXIMA_UNION,
   HORA_APERTURA,
   HORA_CIERRE,
   MINUTOS_USO_MESA,
-  MINUTOS_PREPARACION
+  MINUTOS_PREPARACION,
+  RESERVADA
 } from '../stores/stores.js'
 
 const router = useRouter()
@@ -215,6 +194,7 @@ const $q = useQuasar()
 const mesasStore = useMesasStore()
 const ordenesStore = useOrdenesStore()
 const diaStore = useDiaStore()
+const authStore = useAuthStore()
 
 const dialogoNuevaMesa = ref(false)
 const nuevaMesa = ref({ numero: null, capacidad: 2 })
@@ -227,20 +207,39 @@ const reservasDeMesaAAgendar = computed(() =>
   mesaAAgendar.value ? mesasStore.reservasOrdenadas(mesaAAgendar.value) : []
 )
 
-function mesaStore_proxima(mesa) {
-  return mesasStore.proximaReserva(mesa)
+function estadoVisualMesa(mesa) {
+  return mesasStore.estadoVisual(mesa)
+}
+
+function numerosMesasUnidas(mesa) {
+  return mesa.mesas_unidas
+    .map((id) => mesasStore.obtenerPorId(id))
+    .filter(Boolean)
+    .map((m) => m.numero)
+}
+
+function formatoListaNumeros(numeros) {
+  if (numeros.length <= 1) return numeros.join('')
+  return `${numeros.slice(0, -1).join(', ')} y ${numeros[numeros.length - 1]}`
 }
 
 /* ------------------ Revision periodica de reservas por vencer ------------------ */
 let intervaloAvisos = null
 onMounted(() => {
   intervaloAvisos = setInterval(() => {
-    const avisos = mesasStore.revisarAgendas()
+    const { avisos, cancelaciones } = mesasStore.revisarAgendas()
     for (const aviso of avisos) {
       $q.notify({
         type: 'warning',
         message: `Mesa ${aviso.numero}: la reserva de las ${aviso.hora} necesita la mesa lista en ${aviso.minutos} min.`,
         timeout: 6000
+      })
+    }
+    for (const c of cancelaciones) {
+      $q.notify({
+        type: 'negative',
+        message: `Mesa ${c.numero}: la reserva de las ${c.hora}${c.cliente ? ` (${c.cliente})` : ''} se cancelo por no presentarse.`,
+        timeout: 8000
       })
     }
   }, 30000)
@@ -350,13 +349,14 @@ function confirmarUnion() {
 
 function alClickearMesa(mesa) {
   if (modoUnion.value) {
-    if (mesa.estado !== 'libre') {
-      $q.notify({ type: 'warning', message: 'Solo puedes unir mesas libres.' })
+    if (mesa.estado !== 'libre' || estadoVisualMesa(mesa) === RESERVADA) {
+      $q.notify({ type: 'warning', message: 'Solo puedes unir mesas libres y sin una reserva a punto de llegar.' })
       return
     }
     toggleSeleccion(mesa)
     return
   }
+
   if (mesa.estado === 'unida') {
     const host = mesasStore.mesas.find((m) => m.union_id === mesa.union_id && m.es_host_union)
     $q.notify({ type: 'info', message: host ? `Esta mesa esta unida a la Mesa ${host.numero}.` : 'Esta mesa esta unida a otra.' })
@@ -378,7 +378,7 @@ function abrirDialogoAgenda(mesa) {
 
 function guardarAgenda() {
   if (!mesaAAgendar.value) return
-  const resultado = mesasStore.agendarMesa(mesaAAgendar.value.id, { ...agenda.value })
+  const resultado = mesasStore.agendarMesa(mesaAAgendar.value.id, { ...agenda.value }, authStore.currentUser?.nombre)
   if (!resultado.ok) {
     $q.notify({ type: 'negative', message: resultado.mensaje })
     return
@@ -405,43 +405,17 @@ function confirmarCancelarReserva(reserva) {
 }
 
 const COLORES_MESA = {
-  libre: '#2E7D5B',
-  ocupada: '#C0392B',
+  libre: '#578c54',
+  ocupada: '#964273',
   por_cobrar: '#E0A537',
-  unida: '#9E9E9E'
+  unida: '#9E9E9E',
+  host_union: '#394493',
+  reservada: '#3793B0'
 }
 
-function colorDeMesa(estado) {
-  return COLORES_MESA[estado] || '#9E9E9E'
-}
-
-function sillasDeMesa(capacidad) {
-  const n = Math.min(Math.max(capacidad, 1), 8)
-  const radio = 40
-  const centro = 50
-  const puntos = []
-  for (let i = 0; i < n; i++) {
-    const angulo = (2 * Math.PI * i) / n - Math.PI / 2
-    puntos.push({
-      x: centro + radio * Math.cos(angulo),
-      y: centro + radio * Math.sin(angulo)
-    })
-  }
-  return puntos
-}
-
-function colorEstado(estado) {
-  if (estado === 'libre') return 'positive'
-  if (estado === 'ocupada') return 'negative'
-  if (estado === 'unida') return 'grey-7'
-  return 'warning'
-}
-
-function textoEstado(estado) {
-  if (estado === 'libre') return 'Libre'
-  if (estado === 'ocupada') return 'Ocupada'
-  if (estado === 'unida') return 'Unida'
-  return 'Por cobrar'
+function colorDeMesa(mesa) {
+  if (mesa.es_host_union) return COLORES_MESA.host_union
+  return COLORES_MESA[estadoVisualMesa(mesa)] || '#9E9E9E'
 }
 
 function irAMesa(mesa) {
@@ -527,5 +501,18 @@ function crearMesa() {
   top: 4px;
   left: 4px;
   z-index: 2;
+}
+
+.mesa-card__recuadro {
+  width: 100px;
+  height: 60px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
 }
 </style>

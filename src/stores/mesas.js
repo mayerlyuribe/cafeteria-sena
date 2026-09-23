@@ -9,8 +9,9 @@ export const ESTADOS_MESA = {
     UNIDA: 'unida'
 }
 
+// Estado visual (no se guarda en mesa.estado): indica que una mesa libre
+// tiene una reserva a menos de MINUTOS_PREPARACION de distancia.
 export const RESERVADA = 'reservada'
-
 
 export const CAPACIDAD_MAXIMA_MESA = 4
 export const CAPACIDAD_MAXIMA_UNION = 12
@@ -53,10 +54,11 @@ export const useMesasStore = defineStore('mesas', () => {
         mesaBase(6, 6, 4)
     ])
 
+    // Historial de reservas ya resueltas: llegaron, no llegaron (se vencio el
+    // margen de MINUTOS_PREPARACION) o se cancelaron a mano.
+    const historialReservas = ref([])
+
     const obtenerPorId = computed(() => (id) => mesas.value.find((m) => m.id === Number(id)))
-    const mesasOcupadasOPorCobrar = computed(() =>
-        mesas.value.filter((m) => m.estado !== ESTADOS_MESA.LIBRE && m.estado !== ESTADOS_MESA.UNIDA)
-    )
 
     const mesasVisibles = computed(() =>
         mesas.value.filter((m) => !(m.estado === ESTADOS_MESA.UNIDA && m.union_id))
@@ -102,7 +104,23 @@ export const useMesasStore = defineStore('mesas', () => {
         return ocupada && minutos !== null && minutos <= MINUTOS_PREPARACION
     })
 
-        const estadoVisual = computed(() => (mesa) => {
+    // Mueve una reserva resuelta (llego / no_llego / cancelada_manual) al
+    // historial, guardando quien la registro y cuando quedo resuelta.
+    function archivarReserva(mesa, reserva, resultado) {
+        historialReservas.value.unshift({
+            id: siguienteId(historialReservas.value),
+            mesa_numero: mesa.numero,
+            cliente: reserva.cliente || '',
+            fecha: reserva.fecha,
+            hora: reserva.hora,
+            notas: reserva.notas || '',
+            registrada_por: reserva.registrada_por || null,
+            resultado,
+            hora_resuelta: new Date().toISOString()
+        })
+    }
+
+    const estadoVisual = computed(() => (mesa) => {
         if (mesa.estado === ESTADOS_MESA.LIBRE && enPreparacion.value(mesa)) {
             return RESERVADA
         }
@@ -112,9 +130,12 @@ export const useMesasStore = defineStore('mesas', () => {
     function revisarAgendas() {
         ahora.value = Date.now()
         const avisos = []
+        const cancelaciones = []
         for (const mesa of mesas.value) {
             const reserva = proximaReserva.value(mesa)
-            if (reserva && porLiberar.value(mesa) && !reserva.avisada) {
+            if (!reserva) continue
+
+            if (porLiberar.value(mesa) && !reserva.avisada) {
                 reserva.avisada = true
                 avisos.push({
                     id: mesa.id,
@@ -123,8 +144,17 @@ export const useMesasStore = defineStore('mesas', () => {
                     minutos: Math.max(0, Math.ceil(minutosParaReserva.value(mesa)))
                 })
             }
+
+            // No-show: pasaron MINUTOS_PREPARACION desde la hora de la reserva
+            // y la mesa sigue libre (nadie la ocupo), asi que se cancela sola.
+            const minutos = minutosParaReserva.value(mesa)
+            if (mesa.estado === ESTADOS_MESA.LIBRE && minutos !== null && minutos <= -MINUTOS_PREPARACION) {
+                archivarReserva(mesa, reserva, 'no_llego')
+                mesa.reservas = mesa.reservas.filter((r) => r.id !== reserva.id)
+                cancelaciones.push({ id: mesa.id, numero: mesa.numero, hora: reserva.hora, cliente: reserva.cliente })
+            }
         }
-        return avisos
+        return { avisos, cancelaciones }
     }
 
     // Verifica si una nueva reserva (fecha/hora) choca con alguna reserva ya
@@ -154,7 +184,7 @@ export const useMesasStore = defineStore('mesas', () => {
         return siguienteId(todas)
     }
 
-    function agendarMesa(mesaId, info) {
+    function agendarMesa(mesaId, info, registradaPor = null) {
         const mesa = obtenerPorId.value(mesaId)
         if (!mesa) {
             return { ok: false, mensaje: 'La mesa no existe.' }
@@ -203,6 +233,7 @@ export const useMesasStore = defineStore('mesas', () => {
             fecha: info.fecha,
             hora: info.hora,
             notas: info.notas || '',
+            registrada_por: registradaPor || null,
             avisada: false
         })
 
@@ -213,9 +244,10 @@ export const useMesasStore = defineStore('mesas', () => {
         const mesa = obtenerPorId.value(mesaId)
         if (!mesa) return { ok: false, mensaje: 'La mesa no existe.' }
 
-        const existe = (mesa.reservas || []).some((r) => r.id === reservaId)
-        if (!existe) return { ok: false, mensaje: 'Esa reserva ya no existe.' }
+        const reserva = (mesa.reservas || []).find((r) => r.id === reservaId)
+        if (!reserva) return { ok: false, mensaje: 'Esa reserva ya no existe.' }
 
+        archivarReserva(mesa, reserva, 'cancelada_manual')
         mesa.reservas = mesa.reservas.filter((r) => r.id !== reservaId)
         return { ok: true }
     }
@@ -229,6 +261,7 @@ export const useMesasStore = defineStore('mesas', () => {
             if (reserva) {
                 const minutos = minutosParaReserva.value(mesa)
                 if (minutos === null || minutos <= MINUTOS_PREPARACION) {
+                    archivarReserva(mesa, reserva, 'llego')
                     mesa.reservas = mesa.reservas.filter((r) => r.id !== reserva.id)
                 }
             }
@@ -249,7 +282,7 @@ export const useMesasStore = defineStore('mesas', () => {
     function agregarMesa({ numero, capacidad }) {
         const cap = Number(capacidad)
 
-        if (!numero) return { ok: false, mensaje: 'Debes indicar el numero de mesa.' }
+        if (!numero || Number(numero) < 1) return { ok: false, mensaje: 'Debes indicar el numero de mesa.' }
         if (!cap || cap < 1) return { ok: false, mensaje: 'La capacidad debe ser al menos 1 persona.' }
         if (cap > CAPACIDAD_MAXIMA_MESA) {
             return { ok: false, mensaje: `Una mesa no puede tener mas de ${CAPACIDAD_MAXIMA_MESA} personas. Si necesitas mas cupo, crea varias mesas y luego unelas.` }
@@ -276,7 +309,7 @@ export const useMesasStore = defineStore('mesas', () => {
         const nuevoNumero = numero !== undefined ? Number(numero) : mesa.numero
         const nuevaCapacidad = capacidad !== undefined ? Number(capacidad) : mesa.capacidad
 
-        if (!nuevoNumero) return { ok: false, mensaje: 'Debes indicar el numero de mesa.' }
+        if (!nuevoNumero || nuevoNumero < 1) return { ok: false, mensaje: 'Debes indicar el numero de mesa.' }
         if (!nuevaCapacidad || nuevaCapacidad < 1) {
             return { ok: false, mensaje: 'La capacidad debe ser al menos 1 persona.' }
         }
@@ -370,13 +403,13 @@ export const useMesasStore = defineStore('mesas', () => {
     }
 
     return {
-        mesas, obtenerPorId, mesasOcupadasOPorCobrar, mesasVisibles,
+        mesas, obtenerPorId, mesasVisibles,
         marcarOcupada, marcarPorCobrar, liberarMesa,
         agregarMesa, editarMesa, eliminarMesa, unirMesas, separarUnion,
         agendarMesa, cancelarReserva,
         reservasOrdenadas, reservasVigentes, proximaReserva,
         minutosParaReserva, enPreparacion, porLiberar, revisarAgendas,
-        estadoVisual
+        estadoVisual, historialReservas
     }
 }, {
     persist: true

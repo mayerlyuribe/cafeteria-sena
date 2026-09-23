@@ -1,7 +1,7 @@
 <template>
   <q-page class="q-pa-md">
     <div class="row items-center q-mb-md q-gutter-sm">
-      <div class="text-h5 page-title">Cierre del dia </div>
+      <div class="text-h5 page-title">Cierre del dia</div>
       <q-space />
       <q-btn flat color="primary" icon="history" label="Historial" @click="$router.push({ name: 'historial' })" />
       <q-btn
@@ -17,7 +17,7 @@
         color="primary"
         icon="lock_open"
         label="Iniciar nuevo dia"
-        @click="diaStore.iniciarNuevoDia(authStore.currentUser?.nombre)"
+        @click="diaStore.iniciarNuevoDia()"
       />
     </div>
 
@@ -79,7 +79,6 @@
       </q-item>
     </q-list>
 
-  
 
     <q-dialog v-model="confirmarCierre">
       <q-card>
@@ -99,28 +98,20 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { useOrdenesStore, useMesasStore, useDiaStore, useAuthStore } from '../stores/stores.js'
+import { useOrdenesStore, useMesasStore, useDiaStore } from '../stores/stores.js'
+import { formatoMoneda, formatearHora} from '../stores/utils.js'
 
 const $q = useQuasar()
 const ordenesStore = useOrdenesStore()
 const mesasStore = useMesasStore()
 const diaStore = useDiaStore()
-const authStore = useAuthStore()
 
 const confirmarCierre = ref(false)
 const resumen = computed(() => diaStore.resumenDelDia)
 
 function cerrarDia() {
-  diaStore.cerrarDia(authStore.currentUser?.nombre)
+  diaStore.cerrarDia()
   $q.notify({ type: 'info', message: 'Dia cerrado. Resumen guardado en el historial.' })
 }
 
-function formatoMoneda(valor) {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(valor || 0)
-}
-
-function formatearHora(iso) {
-  if (!iso) return '-'
-  return new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
-}
 </script>
