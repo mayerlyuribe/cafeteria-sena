@@ -3,7 +3,7 @@
     <q-header elevated class="bg-primary text-white">
       <q-toolbar>
         <q-btn flat dense round icon="menu" class="lt-md" @click="drawerAbierto = !drawerAbierto" />
-        <q-img src="/src/assets/logo.png" alt="Logo" class="logo" />
+        <q-img :src="logo" alt="Logo" class="logo" />
         <q-toolbar-title class="page-title">
           <p class="text-h4">CafeterIA pinkipai</p>
         </q-toolbar-title>
@@ -11,7 +11,7 @@
         <q-chip
           v-if="diaStore.diaCerrado"
           color="negative"
-          text-color="white"
+          text-color="white"  
           icon="lock"
           class="q-mr-sm"
         >
@@ -75,16 +75,47 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useDiaStore, useAuthStore } from '../stores/stores.js'
+import { useQuasar } from 'quasar'
+import { useDiaStore, useAuthStore, useMesasStore } from '../stores/stores.js'
+import logo from '../assets/logo.png'
 
 const router = useRouter()
+const $q = useQuasar()
 const drawerAbierto = ref(false)
 const diaStore = useDiaStore()
 const authStore = useAuthStore()
+const mesasStore = useMesasStore()
 
 const rolTexto = computed(() => (authStore.esAdmin ? 'Admin' : 'Empleado'))
+
+/* ------------------ Revision periodica de reservas por vencer ------------------ */
+/* Vive en el layout para que los avisos y las cancelaciones por no presentarse */
+/* se revisen en todas las vistas, no solo cuando el mapa esta montado. */
+let intervaloAvisos = null
+onMounted(() => {
+  intervaloAvisos = setInterval(() => {
+    const { avisos, cancelaciones } = mesasStore.revisarAgendas()
+    for (const aviso of avisos) {
+      $q.notify({
+        type: 'warning',
+        message: `Mesa ${aviso.numero}: la reserva de las ${aviso.hora} necesita la mesa lista en ${aviso.minutos} min.`,
+        timeout: 6000
+      })
+    }
+    for (const c of cancelaciones) {
+      $q.notify({
+        type: 'negative',
+        message: `Mesa ${c.numero}: la reserva de las ${c.hora}${c.cliente ? ` (${c.cliente})` : ''} se cancelo por no presentarse.`,
+        timeout: 8000
+      })
+    }
+  }, 30000)
+})
+onUnmounted(() => {
+  if (intervaloAvisos) clearInterval(intervaloAvisos)
+})
 
 function cerrarSesion() {
   authStore.logout()

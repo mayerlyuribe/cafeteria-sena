@@ -37,6 +37,13 @@ export const router = createRouter({
 router.beforeEach((to) => {
     const authStore = useAuthStore()
 
+    // Verificar integridad del estado de autenticación
+    if (authStore.estaAutenticado && !authStore.currentUser) {
+        // Estado inconsistente: limpiar y redirigir a login
+        authStore.logout()
+        return { name: "login" }
+    }
+
     if (to.name !== "login" && !authStore.estaAutenticado) {
         return { name: "login" }
     }

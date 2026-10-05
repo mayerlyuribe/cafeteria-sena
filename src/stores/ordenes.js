@@ -98,7 +98,7 @@ export const useOrdenesStore = defineStore('ordenes', () => {
         mesasStore.marcarPorCobrar(orden.mesa_id)
     }
 
-    function cobrarYLiberar(ordenId) {
+    function cobrarYLiberar(ordenId, info = {}) {
         const mesasStore = useMesasStore()
         const orden = obtenerOrdenPorId.value(ordenId)
         if (!orden) return
@@ -106,6 +106,10 @@ export const useOrdenesStore = defineStore('ordenes', () => {
         orden.total_final = subtotalDeOrden.value(ordenId)
         orden.estado = ESTADOS_ORDEN.CERRADA
         orden.hora_cierre = new Date().toISOString()
+        // Datos del cobro (metodo de pago y como se dividio la cuenta) para
+        // que queden guardados en el historial del dia.
+        orden.metodo_pago = info.metodoPago || null
+        orden.division = info.division || null
 
         mesasStore.liberarMesa(orden.mesa_id)
     }
@@ -119,6 +123,19 @@ export const useOrdenesStore = defineStore('ordenes', () => {
     ordenes.value = ordenes.value.filter((o) => o.id !== orden.id)
     mesasStore.liberarMesa(orden.mesa_id)
 }
+
+    // Cancela todas las ordenes abiertas y libera sus mesas. Se usa al cerrar
+    // el dia para que el dia siguiente arranque limpio, sin mesas atascadas.
+    function cancelarOrdenesAbiertas() {
+        const mesasStore = useMesasStore()
+        const abiertas = ordenes.value.filter((o) => o.estado === ESTADOS_ORDEN.ABIERTA)
+        const idsAbiertas = new Set(abiertas.map((o) => o.id))
+        items.value = items.value.filter((it) => !idsAbiertas.has(it.orden_id))
+        ordenes.value = ordenes.value.filter((o) => !idsAbiertas.has(o.id))
+        for (const o of abiertas) {
+            mesasStore.liberarMesa(o.mesa_id)
+        }
+    }
     // Arma una "foto" de cada orden cerrada (mesa, quien atendio, que pidieron)
     // para guardarla en el historial del dia antes de vaciar la lista activa.
     function snapshotOrdenesCerradas() {
@@ -132,6 +149,8 @@ export const useOrdenesStore = defineStore('ordenes', () => {
                 hora_apertura: o.hora_apertura,
                 hora_cierre: o.hora_cierre,
                 total_final: o.total_final,
+                metodo_pago: o.metodo_pago || null,
+                division: o.division || null,
                 items: itemsDeOrden.value(o.id).map((it) => ({
                     nombre_producto: it.nombre_producto,
                     precio_unitario: it.precio_unitario,
@@ -156,8 +175,10 @@ export const useOrdenesStore = defineStore('ordenes', () => {
         ordenes, items,
         obtenerOrdenPorId, ordenAbiertaDeMesa, itemsDeOrden, subtotalDeOrden, ordenesCerradas,
         abrirOrden, agregarItem, cambiarCantidad, quitarItem, pedirCuenta, cobrarYLiberar, cancelarOrden,
-        archivarOrdenesDelDia
+        cancelarOrdenesAbiertas, archivarOrdenesDelDia
     }
 }, {
-    persist: true
+    persist: {
+        storage: localStorage
+    }
 })

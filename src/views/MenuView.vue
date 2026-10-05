@@ -54,7 +54,7 @@
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancelar" v-close-popup />
-          <q-btn flat color="primary" label="Guardar" @click="guardar" v-close-popup />
+          <q-btn flat color="primary" label="Guardar" @click="guardar" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -63,10 +63,11 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { useProductosStore } from '../stores/stores.js'
-import { CATEGORIA_MENU } from '../stores/productos.js'
+import { useQuasar } from 'quasar'
+import { useProductosStore, CATEGORIA_MENU } from '../stores/stores.js'
 import { formatoMoneda } from '../stores/utils.js'
 
+const $q = useQuasar()
 const productosStore = useProductosStore()
 
 const dialogoAbierto = ref(false)
@@ -93,16 +94,34 @@ function abrirDialogoEditar(producto) {
 }
 
 function guardar() {
-  if (!form.value.nombre || !form.value.categoria || !form.value.precio_actual) return
-  if (editando.value) {
+  if (!form.value.nombre || !form.value.categoria || !form.value.precio_actual) {
+    $q.notify({ type: 'negative', message: 'Debes completar nombre, categoria y precio.' })
+    return
+  }
+  if (form.value.precio_actual <= 0) {
+    $q.notify({ type: 'negative', message: 'El precio debe ser mayor a cero.' })
+    return
+  }
+  const estabaEditando = !!editando.value
+  if (estabaEditando) {
     productosStore.editarProducto(editando.value, form.value)
   } else {
     productosStore.agregarProducto(form.value)
   }
+  dialogoAbierto.value = false
+  $q.notify({ type: 'positive', message: estabaEditando ? 'Producto actualizado' : 'Producto agregado' })
 }
 
 function eliminar(producto) {
-  productosStore.eliminarProducto(producto.id)
+  $q.dialog({
+    title: 'Eliminar producto',
+    message: `¿Seguro que quieres eliminar "${producto.nombre}"?`,
+    cancel: { label: 'Volver', flat: true },
+    ok: { label: 'Si, eliminar', color: 'negative', flat: true },
+    persistent: true
+  }).onOk(() => {
+    productosStore.eliminarProducto(producto.id)
+  })
 }
 
 

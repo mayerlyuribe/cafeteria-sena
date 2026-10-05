@@ -26,47 +26,58 @@
       <div class="row q-col-gutter-md">
         <div v-for="mesa in mesasStore.mesasVisibles" :key="mesa.id" class="col-12 col-sm-6 col-md-4 col-lg-3">
           <q-card flat bordered class="mesa-card" :class="[
-            `estado-${estadoVisualMesa(mesa)}`,
             { 'mesa-card--disabled': mesa.estado === 'libre' && diaStore.diaCerrado },
             { 'mesa-card--agendada': mesa.reservas.length > 0 },
             { 'mesa-card--seleccionada': mesaEstaSeleccionada(mesa.id) }
           ]" @click="alClickearMesa(mesa)">
-            <q-card-section class="text-center">
+            <q-card-section class="q-pa-md">
               <q-checkbox v-if="modoUnion && mesa.estado === 'libre' && estadoVisualMesa(mesa) !== RESERVADA"
                 class="mesa-checkbox" :model-value="mesaEstaSeleccionada(mesa.id)"
                 @update:model-value="toggleSeleccion(mesa)" @click.stop />
-              <div class="container">
-                <div class="container">
-                  <div class="mesa-card__recuadro" :style="{ backgroundColor: colorDeMesa(mesa) }">
-                    Mesa {{ mesa.numero }}{{ mesa.es_host_union ? ` · ${formatoListaNumeros(numerosMesasUnidas(mesa))}`
-                    : ''
-                    }}
+              
+              <!-- Header: Número de mesa + Badge de estado -->
+              <div class="row items-start justify-between q-mb-sm">
+                <div class="text-h5 text-weight-bold">
+                  Mesa {{ mesa.numero }}{{ mesa.es_host_union ? ` · ${formatoListaNumeros(numerosMesasUnidas(mesa))}` : '' }}
+                </div>
+                <q-badge class="mesa-card__estado" :style="{ backgroundColor: colorDeMesa(mesa) + '33', color: colorDeMesa(mesa) }">
+                  {{ textoEstado(mesa) }}
+                </q-badge>
+              </div>
+
+              <!-- Capacidad -->
+              <div class="row items-center q-mb-sm text-grey-7">
+                <q-icon name="people" size="18px" class="q-mr-xs" />
+                <span>{{ mesa.capacidad }} personas</span>
+              </div>
+
+              <!-- Sección de botones -->
+              <div class="mesa-card__acciones" @click.stop>
+                <div class="row items-center justify-between q-gutter-xs">
+                  <q-btn v-if="mesa.estado === 'libre' && !modoUnion" dense flat size="sm" icon="event" label="Reservar"
+                    color="info" @click="abrirDialogoAgenda(mesa)" />
+
+                  <div class="row items-center q-gutter-xs">
+                    <template v-if="mesa.estado === 'libre' && !modoUnion && estadoVisualMesa(mesa) !== RESERVADA">
+                      <q-btn dense flat round size="sm" icon="edit" color="grey-8" @click="abrirDialogoEditar(mesa)">
+                        <q-tooltip>Editar mesa</q-tooltip>
+                      </q-btn>
+                      <q-btn dense flat round size="sm" icon="delete" color="negative" @click="confirmarEliminar(mesa)">
+                        <q-tooltip>Eliminar mesa</q-tooltip>
+                      </q-btn>
+                    </template>
+
+                        <q-btn v-if="mesa.estado === 'ocupada' && !modoUnion" dense flat size="sm"
+                          icon="receipt_long" label="Ver pedido" color="primary" @click="irAMesa(mesa)" />
+
+                    <q-btn v-if="mesa.es_host_union" dense flat size="sm" icon="call_split" label="Separar"
+                      color="warning" @click="mesasStore.separarUnion(mesa.id)" />
+
+                    <q-btn v-if="(mesa.estado === 'ocupada' || mesa.estado === 'por_cobrar') && !modoUnion" dense flat
+                      size="sm" icon="cancel" label="Cancelar" color="negative"
+                      @click="confirmarCancelarMesaOcupada(mesa)" />
                   </div>
                 </div>
-              </div>
-              <div class="container">
-                <q-icon name="people" size="16px" /> {{ mesa.capacidad }} personas
-              </div>
-
-              <div class="q-mt-sm mesa-card__acciones" @click.stop>
-                <q-btn v-if="mesa.estado === 'libre' && !modoUnion" dense flat size="sm" icon="event" label="Reservas"
-                  color="info" @click="abrirDialogoAgenda(mesa)" />
-
-                <template v-if="mesa.estado === 'libre' && !modoUnion && estadoVisualMesa(mesa) !== RESERVADA">
-                  <q-btn dense flat round size="sm" icon="edit" color="grey-8" @click="abrirDialogoEditar(mesa)">
-                    <q-tooltip>Editar mesa</q-tooltip>
-                  </q-btn>
-                  <q-btn dense flat round size="sm" icon="delete" color="negative" @click="confirmarEliminar(mesa)">
-                    <q-tooltip>Eliminar mesa</q-tooltip>
-                  </q-btn>
-                </template>
-
-                <q-btn v-if="mesa.es_host_union" dense flat size="sm" icon="call_split" label="Separar mesas"
-                  color="warning" @click="mesasStore.separarUnion(mesa.id)" />
-
-                <q-btn v-if="(mesa.estado === 'ocupada' || mesa.estado === 'por_cobrar') && !modoUnion" dense flat
-                  size="sm" icon="cancel" label="Cancelar mesa" color="negative"
-                  @click="confirmarCancelarMesaOcupada(mesa)" />
               </div>
             </q-card-section>
           </q-card>
@@ -82,25 +93,25 @@
 
     <!-- ---------------------- Dialogo: sistema de reservacion ---------------------- -->
     <q-dialog v-model="dialogoAgenda" persistent>
-      <q-card style="width: 420px; max-width: 94vw">
-        <q-card-section class="text-h6">
-          Reservas — Mesa {{ mesaAAgendar?.numero }}
+      <q-card style="width: 520px; max-width: 94vw">
+        <q-card-section class="q-pb-sm">
+          <div class="text-h5 text-weight-bold">Reservas — Mesa {{ mesaAAgendar?.numero }}</div>
         </q-card-section>
 
-        <q-card-section v-if="reservasDeMesaAAgendar.length" class="q-pt-none">
-          <div class="text-caption text-weight-bold text-grey-7 q-mb-xs">Reservas guardadas</div>
+        <q-card-section v-if="reservasDeMesaAAgendar.length" class="q-pt-none q-pb-md">
+          <div class="text-caption text-weight-bold text-grey-7 q-mb-sm">Reservas guardadas</div>
           <q-list bordered separator class="rounded-borders">
-            <q-item v-for="reserva in reservasDeMesaAAgendar" :key="reserva.id">
+            <q-item v-for="reserva in reservasDeMesaAAgendar" :key="reserva.id" class="q-py-sm">
               <q-item-section avatar>
-                <q-icon name="event" color="info" />
+                <q-icon name="event" color="primary" />
               </q-item-section>
               <q-item-section>
-                <q-item-label>{{ formatearFecha(reserva.fecha) }} · {{ reserva.hora }}</q-item-label>
+                <q-item-label class="text-weight-medium">{{ formatearFecha(reserva.fecha) }} · {{ reserva.hora }}</q-item-label>
                 <q-item-label caption>
                   <span v-if="reserva.cliente">{{ reserva.cliente }}</span>
                   <span v-else class="text-grey-6">Sin nombre de cliente</span>
                 </q-item-label>
-              </q-item-section>
+            </q-item-section>
               <q-item-section side>
                 <q-btn dense flat round icon="event_busy" color="negative" size="sm"
                   @click="confirmarCancelarReserva(reserva)">
@@ -110,29 +121,30 @@
             </q-item>
           </q-list>
         </q-card-section>
-        <q-card-section v-else class="q-pt-none text-caption text-grey-6">
-          Esta mesa todavia no tiene reservas guardadas.
+        <q-card-section v-else class="q-pt-none q-pb-md">
+          <div class="text-caption text-grey-6">Esta mesa todavia no tiene reservas guardadas.</div>
         </q-card-section>
 
         <q-separator />
 
-        <q-card-section class="q-gutter-sm">
-          <div class="text-caption text-weight-bold text-grey-7">Nueva reserva</div>
-          <q-input v-model="agenda.cliente" label="Cliente (opcional)" dense outlined />
-          <div class="row q-col-gutter-sm">
-            <q-input v-model="agenda.fecha" type="date" label="Fecha *" dense outlined stack-label :min="hoyLocal()"
-              class="col-6" />
-            <q-input v-model="agenda.hora" type="time" label="Hora *" dense outlined stack-label class="col-6" />
+        <q-card-section class="q-gutter-y-md">
+          <div class="text-subtitle1 text-weight-bold text-grey-7">Nueva reserva</div>
+          <q-input v-model="agenda.cliente" label="Cliente (opcional)" outlined class="full-width" />
+          <q-separator class="q-my-md" />
+          <div class="row q-col-gutter-md">
+            <q-input v-model="agenda.fecha" type="date" label="Fecha *" outlined stack-label :min="hoyLocal()"
+              class="col-6 full-width" />
+            <q-input v-model="agenda.hora" type="time" label="Hora *" outlined stack-label class="col-6 full-width" />
           </div>
-          <div class="text-caption text-grey-7">
+          <div class="text-caption text-grey-7 bg-grey-1 q-pa-sm rounded-borders full-width">
             Horario de atencion: {{ HORA_APERTURA }} a {{ HORA_CIERRE }}. Cada reserva ocupa la mesa
             {{ MINUTOS_USO_MESA }} min, mas {{ MINUTOS_PREPARACION }} min de limpieza antes de la siguiente.
           </div>
-          <q-input v-model="agenda.notas" label="Notas (opcional)" dense outlined type="textarea" autogrow />
+          <q-input v-model="agenda.notas" label="Notas (opcional)" outlined type="textarea" autogrow class="full-width" />
         </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Cerrar" v-close-popup />
-          <q-btn flat color="info" label="Guardar reserva" @click="guardarAgenda" />
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn color="grey-4" bg-color="grey-3" label="Cerrar" v-close-popup class="q-mr-sm" text-color="grey-9" />
+          <q-btn color="primary" label="Guardar reserva" @click="guardarAgenda" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -170,7 +182,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { hoyLocal } from '../stores/utils.js'
@@ -222,31 +234,6 @@ function formatoListaNumeros(numeros) {
   if (numeros.length <= 1) return numeros.join('')
   return `${numeros.slice(0, -1).join(', ')} y ${numeros[numeros.length - 1]}`
 }
-
-/* ------------------ Revision periodica de reservas por vencer ------------------ */
-let intervaloAvisos = null
-onMounted(() => {
-  intervaloAvisos = setInterval(() => {
-    const { avisos, cancelaciones } = mesasStore.revisarAgendas()
-    for (const aviso of avisos) {
-      $q.notify({
-        type: 'warning',
-        message: `Mesa ${aviso.numero}: la reserva de las ${aviso.hora} necesita la mesa lista en ${aviso.minutos} min.`,
-        timeout: 6000
-      })
-    }
-    for (const c of cancelaciones) {
-      $q.notify({
-        type: 'negative',
-        message: `Mesa ${c.numero}: la reserva de las ${c.hora}${c.cliente ? ` (${c.cliente})` : ''} se cancelo por no presentarse.`,
-        timeout: 8000
-      })
-    }
-  }, 30000)
-})
-onUnmounted(() => {
-  if (intervaloAvisos) clearInterval(intervaloAvisos)
-})
 
 /* ---------------------- Editar mesa -------------------- */
 const dialogoEditar = ref(false)
@@ -418,6 +405,19 @@ function colorDeMesa(mesa) {
   return COLORES_MESA[estadoVisualMesa(mesa)] || '#9E9E9E'
 }
 
+function textoEstado(mesa) {
+  if (mesa.es_host_union) return 'Unida'
+  const estado = estadoVisualMesa(mesa)
+  const textos = {
+    libre: 'Libre',
+    ocupada: 'Ocupada',
+    por_cobrar: 'Por cobrar',
+    unida: 'Unida',
+    reservada: 'Reservada'
+  }
+  return textos[estado] || estado
+}
+
 function irAMesa(mesa) {
   if (mesa.estado === 'libre') {
     if (diaStore.diaCerrado) {
@@ -455,12 +455,15 @@ function crearMesa() {
 }
 
 .mesa-card {
-  min-height: 260px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  min-height: 240px;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.mesa-card .q-card__section {
+  flex: 1;
 }
 
 .mesa-card:hover {
@@ -469,7 +472,7 @@ function crearMesa() {
 }
 
 .mesa-card--nueva {
-  min-height: 260px;
+  min-height: 240px;
   border-style: dashed;
 }
 
@@ -487,13 +490,23 @@ function crearMesa() {
   border-color: #4a7a9d;
 }
 
+.mesa-card__estado {
+  border-radius: 12px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .mesa-card__acciones {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 2px;
-  min-height: 34px;
+  gap: 3px;
+  background-color: #f5f5f5;
+  border-radius: 6px;
+  padding: 5px 6px;
+  margin-top: auto;
+  margin-bottom: 4px;
 }
 
 .mesa-checkbox {
@@ -501,18 +514,5 @@ function crearMesa() {
   top: 4px;
   left: 4px;
   z-index: 2;
-}
-
-.mesa-card__recuadro {
-  width: 100px;
-  height: 60px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  color: white;
-  font-weight: 700;
-  font-size: 18px;
 }
 </style>

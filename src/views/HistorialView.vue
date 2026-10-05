@@ -64,6 +64,9 @@
                       <q-item-label caption>
                         {{ orden.items.map(it => `${it.cantidad}x ${it.nombre_producto}`).join(', ') }}
                       </q-item-label>
+                      <q-item-label caption v-if="orden.metodo_pago || orden.division">
+                        {{ orden.metodo_pago }}{{ orden.division ? ` - ${orden.division}` : '' }}
+                      </q-item-label>
                     </q-item-section>
                     <q-item-section side class="text-weight-bold">
                       {{ formatoMoneda(orden.total_final) }}
@@ -113,11 +116,10 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { useDiaStore, useMesasStore } from '../stores/stores.js'
+import { useDiaStore } from '../stores/stores.js'
 import { formatoMoneda, formatearHora } from '../stores/utils.js'
 
 const diaStore = useDiaStore()
-const mesasStore = useMesasStore()
 
 const fechaFiltro = ref('')
 const textoFiltro = ref('')
@@ -142,9 +144,9 @@ function pedidosFiltradosDe(cierre) {
 
 function reservasDelDia(cierre) {
   const q = textoFiltro.value.trim().toLowerCase()
-  const delDia = mesasStore.historialReservas.filter((r) => r.fecha === cierre.fecha)
-  if (!q) return delDia
-  return delDia.filter((r) =>
+  const reservas = cierre.reservas || []
+  if (!q) return reservas
+  return reservas.filter((r) =>
     String(r.mesa_numero).includes(q) ||
     (r.cliente || '').toLowerCase().includes(q) ||
     (r.registrada_por || '').toLowerCase().includes(q)

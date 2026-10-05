@@ -9,7 +9,6 @@
         color="negative"
         icon="lock"
         label="Cerrar el dia"
-        :disable="!resumen.cantidadOrdenes"
         @click="confirmarCierre = true"
       />
       <q-btn
@@ -60,6 +59,18 @@
       </div>
     </div>
 
+    <div v-if="resumen.ordenesAbiertas > 0" class="q-mb-lg">
+      <q-banner class="bg-orange-1 text-orange-9 rounded-borders">
+        <template #avatar>
+          <q-icon name="pending" color="orange" />
+        </template>
+        <div class="text-weight-bold">{{ resumen.ordenesAbiertas }} orden(es) pendiente(s) de cobro</div>
+        <div class="text-caption">
+          Total en juego: {{ formatoMoneda(resumen.totalAbiertas) }}
+        </div>
+      </q-banner>
+    </div>
+
     <div class="text-subtitle1 text-weight-bold q-mb-sm">Ordenes cerradas hoy</div>
     <q-list bordered separator class="q-mb-lg">
       <q-item v-for="orden in ordenesStore.ordenesCerradas" :key="orden.id">
@@ -69,6 +80,10 @@
             {{ formatearHora(orden.hora_apertura) }} → {{ formatearHora(orden.hora_cierre) }}
             <span v-if="orden.atendido_por"> · Atendio: {{ orden.atendido_por }}</span>
           </q-item-label>
+        </q-item-section>
+        <q-item-section side v-if="orden.metodo_pago || orden.division">
+          <div class="text-caption text-grey-7" v-if="orden.metodo_pago">{{ orden.metodo_pago }}</div>
+          <div class="text-caption text-grey-7" v-if="orden.division">{{ orden.division }}</div>
         </q-item-section>
         <q-item-section side class="text-weight-bold">
           {{ formatoMoneda(orden.total_final) }}
@@ -85,6 +100,10 @@
         <q-card-section class="text-h6">¿Cerrar el dia?</q-card-section>
         <q-card-section>
           No se podran abrir nuevas ordenes hasta iniciar un nuevo dia. El historial no se borra.
+          <q-banner v-if="resumen.ordenesAbiertas > 0" class="bg-orange-1 text-orange-9 rounded-borders q-mt-sm">
+            <template #avatar><q-icon name="warning" color="orange" /></template>
+            Hay {{ resumen.ordenesAbiertas }} orden(es) sin cobrar. Al cerrar el dia se cancelaran y las mesas se liberaran.
+          </q-banner>
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancelar" v-close-popup />
@@ -98,18 +117,19 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { useOrdenesStore, useMesasStore, useDiaStore } from '../stores/stores.js'
-import { formatoMoneda, formatearHora} from '../stores/utils.js'
+import { useOrdenesStore, useDiaStore, useMesasStore } from '../stores/stores.js'
+import { formatoMoneda, formatearHora } from '../stores/utils.js'
 
 const $q = useQuasar()
 const ordenesStore = useOrdenesStore()
-const mesasStore = useMesasStore()
 const diaStore = useDiaStore()
+const mesasStore = useMesasStore()
 
 const confirmarCierre = ref(false)
 const resumen = computed(() => diaStore.resumenDelDia)
 
 function cerrarDia() {
+  if (diaStore.diaCerrado) return
   diaStore.cerrarDia()
   $q.notify({ type: 'info', message: 'Dia cerrado. Resumen guardado en el historial.' })
 }

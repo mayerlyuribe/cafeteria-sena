@@ -71,5 +71,7 @@ export const useProductosStore = defineStore('productos', () => {
         agregarProducto, editarProducto, toggleDisponibilidad, eliminarProducto
     }
 }, {
-    persist: true
+    persist: {
+        storage: localStorage
+    }
 })

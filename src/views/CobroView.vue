@@ -3,14 +3,36 @@
     <div class="text-grey">Mesa no encontrada.</div>
   </q-page>
 
+  <q-page class="q-pa-md flex flex-center" v-else-if="!orden">
+    <q-card flat bordered style="max-width: 420px" class="q-pa-lg text-center">
+      <q-icon name="receipt_long" size="48px" color="grey-5" />
+      <div class="text-h6 q-mt-sm">Sin orden abierta</div>
+      <div class="text-grey-7 q-mb-md">La Mesa {{ mesa.numero }} no tiene ninguna orden abierta.</div>
+      <q-btn color="primary" icon="table_restaurant" label="Ir al mapa del local" :to="{ name: 'mapa' }" />
+    </q-card>
+  </q-page>
+
   <q-page class="q-pa-md cobro-shell" v-else>
     <div class="cobro-container">
       <div class="row items-center q-mb-md">
         <q-btn flat round dense icon="arrow_back"
           @click="$router.push({ name: 'orden-mesa', params: { id: mesa.id } })" />
         <div class="text-h5 page-title q-ml-sm">Cobro — Mesa {{ mesa.numero }}</div>
-        <q-badge color="warning" text-color="dark" class="q-ml-md">🟡 Por cobrar</q-badge>
+        <q-badge v-if="mesa.estado === 'por_cobrar'" color="warning" text-color="dark" class="q-ml-md">Por cobrar</q-badge>
+        <q-badge v-else color="negative" class="q-ml-md">Ocupada</q-badge>
+        <q-space />
+        <q-btn dense flat icon="receipt_long" label="Ver pedido"
+          :to="{ name: 'orden-mesa', params: { id: mesa.id } }" />
       </div>
+
+      <q-banner v-if="mesa.estado !== 'por_cobrar'" class="bg-orange-1 text-orange-9 rounded-borders q-mb-md">
+        <template #avatar><q-icon name="info" color="orange" /></template>
+        La orden esta abierta pero aun no se ha pedido la cuenta.
+        <template #action>
+          <q-btn dense unelevated color="warning" text-color="dark" icon="receipt_long" label="Pedir la cuenta"
+            :disable="!items.length" @click="pedirCuenta" />
+        </template>
+      </q-banner>
 
       <q-card flat bordered class="q-mb-md">
         <q-card-section>
@@ -224,7 +246,7 @@ function reiniciarPersonas() {
   }))
 }
 
-watch([dividir, modo, numPersonas], reiniciarPersonas)
+watch([dividir, modo, numPersonas], reiniciarPersonas, { immediate: true })
 
 function restantes(item) {
   const asignadas = personas.value.reduce((sum, p) => sum + (p.cantidades[item.id] || 0), 0)
@@ -267,12 +289,20 @@ const unidadesSinAsignar = computed(() =>
 )
 
 const puedeCobrar = computed(() => {
+  if (!items.value.length) return false
+  if (mesa.value?.estado !== 'por_cobrar') return false
   if (!metodoPago.value) return false
   if (!dividir.value) return true
   if (personas.value.length !== numPersonas.value) return false
   if (modo.value === 'productos' && unidadesSinAsignar.value > 0) return false
   return personas.value.every((p, i) => p.pagado || montos.value[i] === 0)
 })
+
+function pedirCuenta() {
+  if (!orden.value) return
+  ordenesStore.pedirCuenta(orden.value.id)
+  $q.notify({ type: 'info', message: `Mesa ${mesa.value.numero} marcada como por cobrar` })
+}
 
 function confirmarCobro() {
   if (!orden.value || !puedeCobrar.value) return
@@ -287,10 +317,19 @@ function confirmarCobro() {
 }
 
 function cobrar() {
-  if (!orden.value || !puedeCobrar.value || cargando.value) return
+  if (!orden.value || !mesa.value || !puedeCobrar.value || cargando.value) return
+  const metodo = METODOS_PAGO.find((m) => m.valor === metodoPago.value)
+  const division = !dividir.value
+    ? null
+    : modo.value === 'iguales'
+      ? `Dividida en ${numPersonas.value} partes iguales`
+      : `Dividida por producto entre ${numPersonas.value} personas`
   cargando.value = true
   setTimeout(() => {
-    ordenesStore.cobrarYLiberar(orden.value.id)
+    ordenesStore.cobrarYLiberar(orden.value.id, {
+      metodoPago: metodo?.etiqueta || metodoPago.value,
+      division
+    })
     cargando.value = false
     $q.notify({ type: 'positive', message: `Mesa ${mesa.value.numero} cobrada y liberada` })
     router.push('/')

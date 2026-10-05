@@ -184,6 +184,10 @@ export const useMesasStore = defineStore('mesas', () => {
         return siguienteId(todas)
     }
 
+    function limpiarHistorialReservas() {
+        historialReservas.value = []
+    }
+
     function agendarMesa(mesaId, info, registradaPor = null) {
         const mesa = obtenerPorId.value(mesaId)
         if (!mesa) {
@@ -409,8 +413,10 @@ export const useMesasStore = defineStore('mesas', () => {
         agendarMesa, cancelarReserva,
         reservasOrdenadas, reservasVigentes, proximaReserva,
         minutosParaReserva, enPreparacion, porLiberar, revisarAgendas,
-        estadoVisual, historialReservas
+        estadoVisual, historialReservas, limpiarHistorialReservas
     }
 }, {
-    persist: true
+    persist: {
+        storage: localStorage
+    }
 })

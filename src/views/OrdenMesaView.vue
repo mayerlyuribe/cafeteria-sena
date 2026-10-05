@@ -124,7 +124,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useMesasStore, useOrdenesStore, useProductosStore, useDiaStore, useAuthStore } from '../stores/stores.js'
-import { formatoMoneda, formatearHora} from '../stores/utils.js'
+import { formatoMoneda, formatearHora } from '../stores/utils.js'
 const props = defineProps({ id: { type: [String, Number], required: true } })
 
 const router = useRouter()
@@ -145,6 +145,7 @@ const items = computed(() => (orden.value ? ordenesStore.itemsDeOrden(orden.valu
 const subtotal = computed(() => (orden.value ? ordenesStore.subtotalDeOrden(orden.value.id) : 0))
 
 function ocuparMesa() {
+  if (!mesa.value) return
   if (diaStore.diaCerrado) {
     $q.notify({ type: 'negative', message: 'El dia esta cerrado. No se pueden abrir nuevas ordenes.' })
     return
@@ -154,7 +155,7 @@ function ocuparMesa() {
 }
 
 function cancelarMesa() {
-  if (!orden.value) return
+  if (!orden.value || !mesa.value) return
   const numero = mesa.value.numero
   ordenesStore.cancelarOrden(orden.value.id)
   $q.notify({ type: 'info', message: `Mesa ${numero} cancelada y liberada` })
