@@ -30,7 +30,8 @@
             { 'mesa-card--agendada': mesa.reservas.length > 0 },
             { 'mesa-card--seleccionada': mesaEstaSeleccionada(mesa.id) }
           ]" @click="alClickearMesa(mesa)">
-            <q-card-section class="q-pa-md">
+            <q-card-section class="mesa-card__contenido"
+              :class="{ 'mesa-card__contenido--union': modoUnion }">
               <q-checkbox v-if="modoUnion && mesa.estado === 'libre' && estadoVisualMesa(mesa) !== RESERVADA"
                 class="mesa-checkbox" :model-value="mesaEstaSeleccionada(mesa.id)"
                 @update:model-value="toggleSeleccion(mesa)" @click.stop />
@@ -464,6 +465,18 @@ function crearMesa() {
 
 .mesa-card .q-card__section {
   flex: 1;
+}
+
+/* Mas padding para que el contenido de la tarjeta respire. */
+.mesa-card .mesa-card__contenido {
+  padding: 20px;
+}
+
+/* En modo union el checkbox de seleccion queda arriba a la izquierda
+   (top: 4px, ~24px de alto): con este padding extra el nombre de la
+   mesa arranca por debajo y no queda cubierto por el input. */
+.mesa-card .mesa-card__contenido--union {
+  padding-top: 46px;
 }
 
 .mesa-card:hover {
