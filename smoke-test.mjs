@@ -11,7 +11,7 @@ globalThis.localStorage = {
 const { createPinia, setActivePinia } = await import('pinia')
 setActivePinia(createPinia())
 
-const { useAuthStore, useMesasStore, useProductosStore, useOrdenesStore, useDiaStore } =
+const { useAuthStore, useMesasStore, useProductosStore, useOrdenesStore, useCajaStore, useDiaStore } =
     await import('./src/stores/stores.js')
 
 let fallos = 0
@@ -77,21 +77,47 @@ ok(cerrada.metodo_pago === 'Efectivo', 'metodo de pago persistido en la orden')
 ok(cerrada.division === 'Dividida en 2 partes iguales', 'division de cuenta persistida')
 ok(mesas.obtenerPorId(2).estado === 'libre', 'mesa liberada tras el cobro')
 
-/* ---------------------------- Cierre del dia ---------------------------- */
+/* ----------------------- Caja y cierre del dia ----------------------- */
+const caja = useCajaStore()
 const dia = useDiaStore()
+
+ok(caja.abrirCaja({ monto: -5, usuario: 'admin' }).ok === false, 'fondo inicial negativo rechazado')
+ok(caja.abrirCaja({ monto: 50000, usuario: 'admin' }).ok === true, 'caja abierta con fondo inicial')
+ok(caja.abierta === true, 'caja marcada como abierta')
+
 ok(dia.resumenDelDia.totalRecaudado === 10500, 'resumen del dia calcula el total recaudado')
 ok(dia.resumenDelDia.cantidadOrdenes === 1, 'resumen cuenta las ordenes cerradas')
 ok(dia.resumenDelDia.productoMasVendido === 'Cafe americano', 'producto mas vendido calculado')
 
-dia.cerrarDia()
+ok(caja.totalesPorMetodo['Efectivo'] === 10500, 'desglose por metodo de pago calcula el efectivo')
+ok(caja.esperadoEfectivo === 60500, 'efectivo esperado = fondo + cobrado en efectivo')
+
+const cierre = dia.cerrarDia({ contadoEfectivo: 60500, cerradoPor: 'admin', observaciones: 'turno manana' })
+ok(cierre.ok === true, 'dia cerrado correctamente')
 ok(dia.diaCerrado === true, 'dia cerrado')
 ok(dia.cierres.length === 1, 'cierre archivado en el historial')
 ok(dia.cierres[0].ordenes.length === 1, 'ordenes archivadas en el historial')
 ok(dia.cierres[0].ordenes[0].metodo_pago === 'Efectivo', 'historial incluye metodo de pago')
 ok(dia.cierres[0].totalRecaudado === 10500, 'historial guarda el total del dia')
+ok(dia.cierres[0].cerradoPor === 'admin', 'historial guarda quien cerro')
+ok(dia.cierres[0].diferencia === 0, 'arqueo calcula la diferencia (cuadra)')
+
+ok(dia.cerrarDia({ contadoEfectivo: 0 }).ok === false, 'no se puede cerrar dos veces')
 
 dia.iniciarNuevoDia()
 ok(dia.diaCerrado === false, 'nuevo dia iniciado')
+ok(caja.abierta === false, 'la caja se reinicia al iniciar nuevo dia')
+
+/* Orden abierta al cierre se archiva como cancelada (sin perder lo consumido) */
+caja.abrirCaja({ monto: 20000, usuario: 'admin' })
+const o2 = ordenes.abrirOrden(3, 'Maria Gomez')
+ordenes.agregarItem(o2.id, cafe, 1)
+const cierre2 = dia.cerrarDia({ contadoEfectivo: 20000, cerradoPor: 'admin' })
+ok(cierre2.ok === true, 'segundo cierre del dia se genera correctamente')
+ok(dia.cierres[0].sesion === 2, 'segundo cierre del mismo dia queda marcado como sesion 2')
+ok(dia.cierres[0].ordenesCanceladas.length === 1, 'orden abierta archivada como cancelada')
+ok(dia.cierres[0].ordenesCanceladas[0].estado === 'cancelada', 'cancelada tiene estado cancelada')
+ok(dia.cierres[0].totalRecaudado === 0, 'orden cancelada no suma al total recaudado')
 
 /* ---------------------------- Guard de rutas ---------------------------- */
 auth.logout()

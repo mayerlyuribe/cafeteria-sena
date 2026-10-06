@@ -124,17 +124,37 @@ export const useOrdenesStore = defineStore('ordenes', () => {
     mesasStore.liberarMesa(orden.mesa_id)
 }
 
-    // Cancela todas las ordenes abiertas y libera sus mesas. Se usa al cerrar
-    // el dia para que el dia siguiente arranque limpio, sin mesas atascadas.
-    function cancelarOrdenesAbiertas() {
+    // Archiva las ordenes que quedaron abiertas (sin cobrar) al cerrar el dia.
+    // Antes se borraban sin dejar rastro; ahora se guarda una "foto" de cada
+    // una con estado 'cancelada', quien la cancelo y el motivo, para que queden
+    // en el historial del dia y no se pierda lo consumido sin cobrar.
+    function archivarCanceladasAlCierre({ cancelada_por = null, motivo = 'Cierre de dia' } = {}) {
         const mesasStore = useMesasStore()
         const abiertas = ordenes.value.filter((o) => o.estado === ESTADOS_ORDEN.ABIERTA)
+        const snapshot = abiertas.map((o) => ({
+            id: o.id,
+            mesa_numero: mesasStore.obtenerPorId(o.mesa_id)?.numero ?? null,
+            atendido_por: o.atendido_por || 'Sin registrar',
+            hora_apertura: o.hora_apertura,
+            hora_cierre: new Date().toISOString(),
+            total_final: subtotalDeOrden.value(o.id),
+            estado: 'cancelada',
+            cancelada_por: cancelada_por || null,
+            motivo,
+            items: itemsDeOrden.value(o.id).map((it) => ({
+                nombre_producto: it.nombre_producto,
+                precio_unitario: it.precio_unitario,
+                cantidad: it.cantidad
+            }))
+        }))
+
         const idsAbiertas = new Set(abiertas.map((o) => o.id))
         items.value = items.value.filter((it) => !idsAbiertas.has(it.orden_id))
         ordenes.value = ordenes.value.filter((o) => !idsAbiertas.has(o.id))
         for (const o of abiertas) {
             mesasStore.liberarMesa(o.mesa_id)
         }
+        return snapshot
     }
     // Arma una "foto" de cada orden cerrada (mesa, quien atendio, que pidieron)
     // para guardarla en el historial del dia antes de vaciar la lista activa.
@@ -151,6 +171,7 @@ export const useOrdenesStore = defineStore('ordenes', () => {
                 total_final: o.total_final,
                 metodo_pago: o.metodo_pago || null,
                 division: o.division || null,
+                estado: o.estado,
                 items: itemsDeOrden.value(o.id).map((it) => ({
                     nombre_producto: it.nombre_producto,
                     precio_unitario: it.precio_unitario,
@@ -175,7 +196,7 @@ export const useOrdenesStore = defineStore('ordenes', () => {
         ordenes, items,
         obtenerOrdenPorId, ordenAbiertaDeMesa, itemsDeOrden, subtotalDeOrden, ordenesCerradas,
         abrirOrden, agregarItem, cambiarCantidad, quitarItem, pedirCuenta, cobrarYLiberar, cancelarOrden,
-        cancelarOrdenesAbiertas, archivarOrdenesDelDia
+        archivarCanceladasAlCierre, archivarOrdenesDelDia
     }
 }, {
     persist: {

@@ -62,10 +62,14 @@ npm test        # test funcional de stores (auth, mesas, reservas, ordenes, cobr
 - Dividir la cuenta: por producto o en partes iguales, con seguimiento de pagos individuales.
 - El método de pago y la división quedan guardados en la orden cerrada y aparecen en el historial.
 
-### Cierre de día (`src/stores/dia.js`)
+### Cierre de día (`src/stores/dia.js`) y caja (`src/stores/caja.js`)
+- **Apertura de caja:** registro de fondo inicial antes de operar.
 - Resumen: total recaudado, mesas atendidas, ticket promedio y producto más vendido.
-- Archiva órdenes cerradas y reservas del día, cancela órdenes abiertas y libera mesas.
-- El historial no se borra al cerrar un día.
+- **Ventas por método de pago:** desglose de lo cobrado en efectivo, tarjeta, transferencia y Nequi/Daviplata.
+- **Arqueo:** compara el efectivo esperado (fondo + cobrado) contra el efectivo contado y guarda la diferencia (faltante/sobrante).
+- Al cerrar se registran responsable, hora, observaciones y sesión; se archivan órdenes cerradas, reservas y **órdenes abiertas como canceladas** (sin perder lo consumido).
+- El cierre es inmutable (no se puede cerrar dos veces) y el historial no se borra.
+- Un nuevo día reinicia la caja y permite una segunda sesión en la misma fecha (marcada con su número de sesión).
 
 ### Persistencia
 Todos los stores se persisten en `localStorage`, por lo que los datos (mesas, órdenes, historial) sobreviven al cerrar el navegador. Para reiniciar la aplicación, limpia el almacenamiento del navegador o elimina las claves `*` de los stores en DevTools.
@@ -83,6 +87,7 @@ src/
 │   ├── mesas.js          # Mesas, uniones y reservas
 │   ├── productos.js      # Menú de productos
 │   ├── ordenes.js        # Órdenes, items y cobro
+│   ├── caja.js           # Apertura de caja, ventas por método de pago y arqueo
 │   ├── dia.js            # Cierre de día e historial
 │   └── utils.js          # Helpers (fechas, moneda, ids)
 └── views/

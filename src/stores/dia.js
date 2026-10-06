@@ -2,11 +2,12 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useOrdenesStore, ESTADOS_ORDEN } from './ordenes.js'
 import { useMesasStore } from './mesas.js'
-import { siguienteId } from './utils.js'
+import { useCajaStore } from './caja.js'
+import { siguienteId, hoyLocal } from './utils.js'
 
 export const useDiaStore = defineStore('dia', () => {
     const diaCerrado = ref(false)
-    const fechaInicioDia = ref(new Date().toISOString().slice(0, 10))
+    const fechaInicioDia = ref(hoyLocal())
     const cierres = ref([])
 
     const ordenesAbiertas = computed(() =>
@@ -49,34 +50,76 @@ export const useDiaStore = defineStore('dia', () => {
         }
     })
 
-    function cerrarDia() {
+    function cerrarDia(payload = {}) {
         const ordenesStore = useOrdenesStore()
         const mesasStore = useMesasStore()
+        const cajaStore = useCajaStore()
+
+        if (diaCerrado.value) {
+            return { ok: false, mensaje: 'El dia ya esta cerrado.' }
+        }
+        if (!cajaStore.abierta) {
+            return { ok: false, mensaje: 'Registra el fondo inicial (apertura de caja) antes de cerrar el dia.' }
+        }
+
+        // Se capturan los datos del dia antes de archivar/limpiar las listas
+        // activas, porque los getters de caja dependen de las ordenes cerradas.
         const resumen = resumenDelDia.value
+        const totalesPorMetodo = { ...cajaStore.totalesPorMetodo }
+        const fondoInicial = cajaStore.fondoInicial
+        const esperadoEfectivo = cajaStore.esperadoEfectivo
+
         const ordenesDelDia = ordenesStore.archivarOrdenesDelDia()
 
-        // Las reservas resueltas durante el dia se guardan en el historial
-        // de mesas. Se capturan aca y luego se limpia para el dia siguiente.
+        // Las ordenes abiertas (sin cobrar) se archivan como canceladas para no
+        // perder lo consumido, y las mesas se liberan para el dia siguiente.
+        const ordenesCanceladas = ordenesStore.archivarCanceladasAlCierre({
+            cancelada_por: payload.cerradoPor || null,
+            motivo: payload.motivoCierre || 'Cierre de dia'
+        })
+
+        // Las reservas resueltas durante el dia se guardan en el historial.
         const reservasDelDia = [...mesasStore.historialReservas]
 
-        // Se cancelan las ordenes que quedaron abiertas (sin cobrar) para que
-        // las mesas no queden atascadas al iniciar un nuevo dia.
-        ordenesStore.cancelarOrdenesAbiertas()
+        const contadoEfectivo = Number(payload.contadoEfectivo)
+        const hayConteo = Number.isFinite(contadoEfectivo) && payload.contadoEfectivo !== '' && payload.contadoEfectivo != null
+        const diferencia = hayConteo ? contadoEfectivo - esperadoEfectivo : null
+
+        // Si ya existe un cierre para esta fecha, este es una sesion posterior
+        // (por ejemplo, el local cerro y volvio a abrir el mismo dia).
+        const sesion = cierres.value.filter((c) => c.fecha === fechaInicioDia.value).length + 1
 
         cierres.value.unshift({
             id: siguienteId(cierres.value),
             fecha: fechaInicioDia.value,
             ...resumen,
+            sesion,
+            fondoInicial,
+            totalesPorMetodo,
+            esperadoEfectivo,
+            contadoEfectivo: hayConteo ? contadoEfectivo : null,
+            diferencia,
+            observaciones: payload.observaciones || '',
+            cerradoPor: payload.cerradoPor || null,
+            horaCierreISO: new Date().toISOString(),
             ordenes: ordenesDelDia,
+            ordenesCanceladas,
             reservas: reservasDelDia
         })
         mesasStore.limpiarHistorialReservas()
         diaCerrado.value = true
+
+        return { ok: true, diferencia }
     }
 
     function iniciarNuevoDia() {
+        if (!diaCerrado.value) {
+            return { ok: false, mensaje: 'El dia aun no se ha cerrado.' }
+        }
         diaCerrado.value = false
-        fechaInicioDia.value = new Date().toISOString().slice(0, 10)
+        fechaInicioDia.value = hoyLocal()
+        useCajaStore().limpiarCaja()
+        return { ok: true }
     }
 
     return {

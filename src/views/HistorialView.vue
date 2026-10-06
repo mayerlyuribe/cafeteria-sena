@@ -25,7 +25,10 @@
         <div v-for="c in cierresFiltrados" :key="c.id" class="col-12 col-sm-6 col-md-4">
           <q-card flat bordered>
             <q-card-section>
-              <div class="text-subtitle1 text-weight-bold">{{ c.fecha }}</div>
+              <div class="text-subtitle1 text-weight-bold">
+                {{ c.fecha }}
+                <q-badge v-if="(c.sesion || 1) > 1" color="info" class="q-ml-xs">Sesion {{ c.sesion }}</q-badge>
+              </div>
               <div class="text-caption text-grey-7">
                 {{ c.cantidadOrdenes }} ordenes · {{ c.mesasAtendidas }} mesas
               </div>
@@ -34,6 +37,19 @@
               </div>
               <div class="text-h6 text-weight-bold text-primary q-mt-xs">
                 {{ formatoMoneda(c.totalRecaudado) }}
+              </div>
+              <div class="text-caption text-grey-7 q-mt-xs">
+                Cerrado por {{ c.cerradoPor || 'Sin registrar' }} · {{ formatearHora(c.horaCierreISO) }}
+              </div>
+              <div v-if="c.esperadoEfectivo != null" class="text-caption q-mt-xs">
+                Caja: esperado {{ formatoMoneda(c.esperadoEfectivo) }}
+                <span v-if="c.contadoEfectivo != null"> · contado {{ formatoMoneda(c.contadoEfectivo) }}</span>
+                <span v-if="c.diferencia != null" :class="diferenciaColor(c.diferencia)">
+                  · {{ textoDiferencia(c.diferencia) }}
+                </span>
+              </div>
+              <div v-if="textoMetodos(c)" class="text-caption text-grey-7 q-mt-xs">
+                {{ textoMetodos(c) }}
               </div>
 
               <div class="row q-gutter-sm q-mt-sm">
@@ -44,6 +60,10 @@
                 <div class="text-caption text-info cursor-pointer" @click="toggleReservas(c.id)">
                   <q-icon :name="reservasExpandido === c.id ? 'expand_less' : 'expand_more'" size="14px" />
                   {{ reservasExpandido === c.id ? 'Ocultar reservas' : `Reservas (${reservasDelDia(c).length})` }}
+                </div>
+                <div class="text-caption text-info cursor-pointer" @click="toggleCanceladas(c.id)">
+                  <q-icon :name="canceladasExpandido === c.id ? 'expand_less' : 'expand_more'" size="14px" />
+                  {{ canceladasExpandido === c.id ? 'Ocultar canceladas' : `Canceladas (${(c.ordenesCanceladas || []).length})` }}
                 </div>
               </div>
             </q-card-section>
@@ -107,6 +127,34 @@
                 </div>
               </q-card-section>
             </q-slide-transition>
+
+            <q-slide-transition>
+              <q-card-section v-if="canceladasExpandido === c.id" class="q-pt-none">
+                <q-separator class="q-mb-sm" />
+                <div class="text-caption text-weight-bold text-grey-7 q-mb-xs">Ordenes canceladas por cierre</div>
+                <q-list v-if="(c.ordenesCanceladas || []).length" bordered separator>
+                  <q-item v-for="orden in c.ordenesCanceladas" :key="orden.id">
+                    <q-item-section>
+                      <q-item-label>
+                        Mesa {{ orden.mesa_numero ?? '—' }} · Atendio: {{ orden.atendido_por }}
+                      </q-item-label>
+                      <q-item-label caption>
+                        {{ orden.items.map(it => `${it.cantidad}x ${it.nombre_producto}`).join(', ') }}
+                      </q-item-label>
+                      <q-item-label caption>
+                        Cancelada por {{ orden.cancelada_por || 'Sin registrar' }} · {{ orden.motivo }}
+                      </q-item-label>
+                    </q-item-section>
+                    <q-item-section side class="text-weight-bold text-grey-7">
+                      {{ formatoMoneda(orden.total_final) }}
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+                <div v-else class="text-grey text-center q-pa-sm">
+                  No hay ordenes canceladas en este dia.
+                </div>
+              </q-card-section>
+            </q-slide-transition>
           </q-card>
         </div>
       </div>
@@ -125,6 +173,7 @@ const fechaFiltro = ref('')
 const textoFiltro = ref('')
 const pedidosExpandido = ref(null)
 const reservasExpandido = ref(null)
+const canceladasExpandido = ref(null)
 
 const cierresFiltrados = computed(() =>
   diaStore.cierres.filter((c) => !fechaFiltro.value || c.fecha === fechaFiltro.value)
@@ -159,6 +208,28 @@ function togglePedidos(id) {
 
 function toggleReservas(id) {
   reservasExpandido.value = reservasExpandido.value === id ? null : id
+}
+
+function toggleCanceladas(id) {
+  canceladasExpandido.value = canceladasExpandido.value === id ? null : id
+}
+
+function textoMetodos(c) {
+  const totales = c.totalesPorMetodo || {}
+  const partes = Object.entries(totales).map(([metodo, total]) => `${metodo}: ${formatoMoneda(total)}`)
+  return partes.join(' · ')
+}
+
+function diferenciaColor(d) {
+  if (d < 0) return 'text-negative'
+  if (d > 0) return 'text-warning'
+  return 'text-positive'
+}
+
+function textoDiferencia(d) {
+  if (d < 0) return `faltante ${formatoMoneda(Math.abs(d))}`
+  if (d > 0) return `sobrante ${formatoMoneda(d)}`
+  return 'cuadra'
 }
 
 function iconoResultado(resultado) {
