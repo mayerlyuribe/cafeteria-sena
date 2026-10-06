@@ -7,3 +7,13 @@ export const hoyLocal = () => {
     const dia = String(d.getDate()).padStart(2, '0')
     return `${d.getFullYear()}-${mes}-${dia}`
 }
+
+export function formatoMoneda(valor) {
+    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(valor || 0)
+}
+
+export function formatearHora(iso) {
+    if (!iso) return '-'
+    return new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
+}
+

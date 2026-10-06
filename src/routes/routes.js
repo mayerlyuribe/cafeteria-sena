@@ -9,6 +9,7 @@ import OrdenMesaView from "../views/OrdenMesaView.vue"
 import CobroView from "../views/CobroView.vue"
 import MenuView from "../views/MenuView.vue"
 import CierreDiaView from "../views/CierreDiaView.vue"
+import HistorialView from "../views/HistorialView.vue"
 import ErrorNotFoundView from "../views/ErrorNotFoundView.vue"
 
 const routes = [
@@ -21,7 +22,8 @@ const routes = [
             { path: "mesa/:id", name: "orden-mesa", component: OrdenMesaView, props: true },
             { path: "mesa/:id/cobro", name: "cobro", component: CobroView, props: true },
             { path: "menu", name: "menu", component: MenuView, meta: { requiresAdmin: true } },
-            { path: "cierre", name: "cierre", component: CierreDiaView, meta: { requiresAdmin: true } }
+            { path: "cierre", name: "cierre", component: CierreDiaView, meta: { requiresAdmin: true } },
+            { path: "historial", name: "historial", component: HistorialView, meta: { requiresAdmin: true } }
         ]
     },
     { path: "/:catchAll(.*)*", name: "not-found", component: ErrorNotFoundView }
@@ -34,6 +36,13 @@ export const router = createRouter({
 
 router.beforeEach((to) => {
     const authStore = useAuthStore()
+
+    // Verificar integridad del estado de autenticación
+    if (authStore.estaAutenticado && !authStore.currentUser) {
+        // Estado inconsistente: limpiar y redirigir a login
+        authStore.logout()
+        return { name: "login" }
+    }
 
     if (to.name !== "login" && !authStore.estaAutenticado) {
         return { name: "login" }

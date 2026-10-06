@@ -3,11 +3,12 @@
     <q-page-container>
       <q-page class="flex flex-center bg-grey-2">
         <q-card style="width: 380px; max-width: 92vw" class="q-pa-sm">
+
           <q-card-section class="text-center">
-            <q-icon name="local_cafe" size="42px" color="primary" />
-            <div class="text-h6 page-title q-mt-sm">Cafeteria SENA — Iniciar sesion</div>
-            <div class="text-caption text-grey-7">Ingresa con tu usuario de admin o empleado</div>
-          </q-card-section>
+  <div class="logo-login" />
+  <div class="text-h6 page-title q-mt-sm">CafeterIA pinkipai</div>
+  <div class="text-caption text-grey-7">Ingresa con tu usuario de admin o empleado</div>
+</q-card-section>
 
           <q-card-section class="q-gutter-md">
             <q-input
@@ -59,7 +60,7 @@
 
           <q-card-section class="text-caption text-grey-7">
             <div class="text-weight-bold q-mb-xs">Usuarios de prueba</div>
-            <div>Admin → usuario: <code>admin</code> · clave: <code>admin123</code></div>
+            <div>Admin → usuario: <code>admin</code> · clave: <code>admin</code></div>
             <div>Empleado → usuario: <code>maria</code> · clave: <code>1234</code></div>
           </q-card-section>
         </q-card>
@@ -103,3 +104,14 @@ function ingresar() {
   }, 1200)
 }
 </script>
+
+<style scoped>
+.logo-login{
+  width: 120px;
+  height: 120px;
+  margin: 0 auto;
+  background-color: #5c2746;
+  -webkit-mask: url('../assets/logo.png') center / contain no-repeat;
+  mask: url('../assets/logo.png') center / contain no-repeat;
+}
+</style>

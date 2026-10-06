@@ -1,5 +1,6 @@
 export * from './mesas.js'
 export * from './productos.js'
 export * from './ordenes.js'
+export * from './caja.js'
 export * from './dia.js'
 export * from './auth.js'

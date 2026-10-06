@@ -3,14 +3,36 @@
     <div class="text-grey">Mesa no encontrada.</div>
   </q-page>
 
+  <q-page class="q-pa-md flex flex-center" v-else-if="!orden">
+    <q-card flat bordered style="max-width: 420px" class="q-pa-lg text-center">
+      <q-icon name="receipt_long" size="48px" color="grey-5" />
+      <div class="text-h6 q-mt-sm">Sin orden abierta</div>
+      <div class="text-grey-7 q-mb-md">La Mesa {{ mesa.numero }} no tiene ninguna orden abierta.</div>
+      <q-btn color="primary" icon="table_restaurant" label="Ir al mapa del local" :to="{ name: 'mapa' }" />
+    </q-card>
+  </q-page>
+
   <q-page class="q-pa-md cobro-shell" v-else>
     <div class="cobro-container">
       <div class="row items-center q-mb-md">
         <q-btn flat round dense icon="arrow_back"
           @click="$router.push({ name: 'orden-mesa', params: { id: mesa.id } })" />
         <div class="text-h5 page-title q-ml-sm">Cobro — Mesa {{ mesa.numero }}</div>
-        <q-badge color="warning" text-color="dark" class="q-ml-md">🟡 Por cobrar</q-badge>
+        <q-badge v-if="mesa.estado === 'por_cobrar'" color="warning" text-color="dark" class="q-ml-md">Por cobrar</q-badge>
+        <q-badge v-else color="negative" class="q-ml-md">Ocupada</q-badge>
+        <q-space />
+        <q-btn dense flat icon="receipt_long" label="Ver pedido"
+          :to="{ name: 'orden-mesa', params: { id: mesa.id } }" />
       </div>
+
+      <q-banner v-if="mesa.estado !== 'por_cobrar'" class="bg-orange-1 text-orange-9 rounded-borders q-mb-md">
+        <template #avatar><q-icon name="info" color="orange" /></template>
+        La orden esta abierta pero aun no se ha pedido la cuenta.
+        <template #action>
+          <q-btn dense unelevated color="warning" text-color="dark" icon="receipt_long" label="Pedir la cuenta"
+            :disable="!items.length" @click="pedirCuenta" />
+        </template>
+      </q-banner>
 
       <q-card flat bordered class="q-mb-md">
         <q-card-section>
@@ -47,8 +69,7 @@
           <div class="row q-col-gutter-sm metodo-pago-grid">
             <div v-for="metodo in METODOS_PAGO" :key="metodo.valor" class="col-6 col-sm-3">
               <q-card flat bordered class="metodo-pago-card"
-                :class="{ 'metodo-pago-card--activo': metodoPago === metodo.valor }"
-                @click="metodoPago = metodo.valor">
+                :class="{ 'metodo-pago-card--activo': metodoPago === metodo.valor }" @click="metodoPago = metodo.valor">
                 <q-card-section class="text-center q-pa-sm">
                   <q-icon :name="metodo.icono" size="26px"
                     :color="metodoPago === metodo.valor ? 'primary' : 'grey-7'" />
@@ -73,17 +94,10 @@
 
           <div class="dividir-centro">
             <q-card-section class="flex flex-center">
-              <q-btn-toggle
-                v-model="modo"
-                no-caps
-                unelevated
-                toggle-color="primary"
-                :disable="hayPagos"
-                :options="[
-                  { label: 'Por producto', value: 'productos' },
-                  { label: 'Partes iguales', value: 'iguales' }
-                ]"
-              />
+              <q-btn-toggle v-model="modo" no-caps unelevated toggle-color="primary" :disable="hayPagos" :options="[
+                { label: 'Por producto', value: 'productos' },
+                { label: 'Partes iguales', value: 'iguales' }
+              ]" />
             </q-card-section>
 
             <q-separator />
@@ -91,17 +105,11 @@
             <q-card-section class="flex flex-center column items-center">
               <div class="text-caption text-grey-7 q-mb-xs">Numero de personas</div>
               <div class="row items-center q-gutter-md">
-                <q-btn
-                  dense round outline icon="remove" size="md"
-                  :disable="numPersonas <= 2 || hayPagos"
-                  @click="numPersonas--"
-                />
+                <q-btn dense round outline icon="remove" size="md" :disable="numPersonas <= 2 || hayPagos"
+                  @click="numPersonas--" />
                 <div class="text-h6" style="min-width: 32px; text-align: center">{{ numPersonas }}</div>
-                <q-btn
-                  dense round outline icon="add" size="md"
-                  :disable="numPersonas >= CAPACIDAD_MAXIMA_UNION || hayPagos"
-                  @click="numPersonas++"
-                />
+                <q-btn dense round outline icon="add" size="md"
+                  :disable="numPersonas >= CAPACIDAD_MAXIMA_UNION || hayPagos" @click="numPersonas++" />
               </div>
             </q-card-section>
 
@@ -109,8 +117,8 @@
 
             <q-card-section class="q-py-md">
               <div v-if="modo === 'iguales'" class="column items-center q-gutter-sm personas-lista">
-                <q-card v-for="(persona, i) in personas" :key="i" flat bordered
-                  class="persona-card" :class="{ 'persona-card--pagada': persona.pagado }">
+                <q-card v-for="(persona, i) in personas" :key="i" flat bordered class="persona-card"
+                  :class="{ 'persona-card--pagada': persona.pagado }">
                   <q-card-section class="row items-center no-wrap">
                     <q-checkbox v-model="persona.pagado" color="positive" />
                     <div class="col text-center">
@@ -124,22 +132,11 @@
               </div>
 
               <div v-else class="column items-center q-gutter-sm personas-lista">
-                <q-expansion-item
-                  v-for="(persona, i) in personas"
-                  :key="i"
-                  group="personas"
-                  expand-separator
-                  class="persona-expansion"
-                  :class="{ 'persona-card--pagada': persona.pagado }"
-                >
+                <q-expansion-item v-for="(persona, i) in personas" :key="i" group="personas" expand-separator
+                  class="persona-expansion" :class="{ 'persona-card--pagada': persona.pagado }">
                   <template #header>
                     <q-item-section side>
-                      <q-checkbox
-                        v-model="persona.pagado"
-                        color="positive"
-                        :disable="montos[i] === 0"
-                        @click.stop
-                      />
+                      <q-checkbox v-model="persona.pagado" color="positive" :disable="montos[i] === 0" @click.stop />
                     </q-item-section>
                     <q-item-section class="text-center">Persona {{ i + 1 }}</q-item-section>
                     <q-item-section side class="text-weight-bold">
@@ -157,19 +154,14 @@
                       </q-item-section>
                       <q-item-section side>
                         <div class="row items-center q-gutter-xs">
-                          <q-btn
-                            dense round flat icon="remove" size="sm"
+                          <q-btn dense round flat icon="remove" size="sm"
                             :disable="persona.pagado || !persona.cantidades[item.id]"
-                            @click="ajustar(persona, item, -1)"
-                          />
+                            @click="ajustar(persona, item, -1)" />
                           <div style="min-width: 24px; text-align: center">
                             {{ persona.cantidades[item.id] || 0 }}
                           </div>
-                          <q-btn
-                            dense round flat icon="add" size="sm"
-                            :disable="persona.pagado || restantes(item) <= 0"
-                            @click="ajustar(persona, item, 1)"
-                          />
+                          <q-btn dense round flat icon="add" size="sm" :disable="persona.pagado || restantes(item) <= 0"
+                            @click="ajustar(persona, item, 1)" />
                         </div>
                       </q-item-section>
                     </q-item>
@@ -191,7 +183,8 @@
                 </div>
                 <div>
                   <div class="text-caption text-grey-7">Falta</div>
-                  <div class="text-subtitle1 text-weight-bold text-negative">{{ formatoMoneda(total - totalPagado) }}</div>
+                  <div class="text-subtitle1 text-weight-bold text-negative">{{ formatoMoneda(total - totalPagado) }}
+                  </div>
                 </div>
               </div>
             </q-card-section>
@@ -199,8 +192,15 @@
         </template>
       </q-card>
 
-      <q-btn color="positive" icon="payments" label="Cobrar y liberar mesa" size="lg"
-        class="full-width" :disable="!puedeCobrar" @click="confirmarCobro" />
+      <q-btn color="positive" icon="payments" :label="cargando ? 'Verificando pago...' : 'Cobrar y liberar mesa'"
+        size="lg" class="full-width" :loading="cargando" :disable="!puedeCobrar || cargando" @click="confirmarCobro">
+        <template #loading>
+          <q-spinner-dots class="q-mr-sm" />
+          Verificando pago...
+        </template>
+      </q-btn>
+
+
     </div>
   </q-page>
 </template>
@@ -210,6 +210,7 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useMesasStore, useOrdenesStore, CAPACIDAD_MAXIMA_UNION } from '../stores/stores.js'
+import { formatoMoneda } from '../stores/utils.js'
 const props = defineProps({ id: { type: [String, Number], required: true } })
 
 const router = useRouter()
@@ -236,6 +237,8 @@ const modo = ref('productos')
 const numPersonas = ref(2)
 const personas = ref([])
 
+const cargando = ref(false)
+
 function reiniciarPersonas() {
   personas.value = Array.from({ length: numPersonas.value }, () => ({
     pagado: false,
@@ -243,7 +246,7 @@ function reiniciarPersonas() {
   }))
 }
 
-watch([dividir, modo, numPersonas], reiniciarPersonas)
+watch([dividir, modo, numPersonas], reiniciarPersonas, { immediate: true })
 
 function restantes(item) {
   const asignadas = personas.value.reduce((sum, p) => sum + (p.cantidades[item.id] || 0), 0)
@@ -286,12 +289,20 @@ const unidadesSinAsignar = computed(() =>
 )
 
 const puedeCobrar = computed(() => {
+  if (!items.value.length) return false
+  if (mesa.value?.estado !== 'por_cobrar') return false
   if (!metodoPago.value) return false
   if (!dividir.value) return true
   if (personas.value.length !== numPersonas.value) return false
   if (modo.value === 'productos' && unidadesSinAsignar.value > 0) return false
   return personas.value.every((p, i) => p.pagado || montos.value[i] === 0)
 })
+
+function pedirCuenta() {
+  if (!orden.value) return
+  ordenesStore.pedirCuenta(orden.value.id)
+  $q.notify({ type: 'info', message: `Mesa ${mesa.value.numero} marcada como por cobrar` })
+}
 
 function confirmarCobro() {
   if (!orden.value || !puedeCobrar.value) return
@@ -306,15 +317,26 @@ function confirmarCobro() {
 }
 
 function cobrar() {
-  if (!orden.value || !puedeCobrar.value) return
-  ordenesStore.cobrarYLiberar(orden.value.id)
-  $q.notify({ type: 'positive', message: `Mesa ${mesa.value.numero} cobrada y liberada` })
-  router.push('/')
+  if (!orden.value || !mesa.value || !puedeCobrar.value || cargando.value) return
+  const metodo = METODOS_PAGO.find((m) => m.valor === metodoPago.value)
+  const division = !dividir.value
+    ? null
+    : modo.value === 'iguales'
+      ? `Dividida en ${numPersonas.value} partes iguales`
+      : `Dividida por producto entre ${numPersonas.value} personas`
+  cargando.value = true
+  setTimeout(() => {
+    ordenesStore.cobrarYLiberar(orden.value.id, {
+      metodoPago: metodo?.etiqueta || metodoPago.value,
+      division
+    })
+    cargando.value = false
+    $q.notify({ type: 'positive', message: `Mesa ${mesa.value.numero} cobrada y liberada` })
+    router.push('/')
+  }, 1300)
 }
 
-function formatoMoneda(valor) {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(valor || 0)
-}
+
 </script>
 
 <style scoped>

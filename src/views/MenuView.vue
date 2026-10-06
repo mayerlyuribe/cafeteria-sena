@@ -17,10 +17,10 @@
           <q-item-section side>
             <div class="row items-center q-gutter-sm">
               <q-toggle
-                v-model="p.disponible"
-                color="positive"
-                @update:model-value="productosStore.toggleDisponibilidad(p.id)"
+              color="positive"
                 :model-value="p.disponible"
+                @update:model-value="productosStore.toggleDisponibilidad(p.id)"
+                
               />
               <q-btn dense flat round icon="edit" @click="abrirDialogoEditar(p)" />
               <q-btn dense flat round icon="delete" color="negative" @click="eliminar(p)" />
@@ -34,7 +34,7 @@
       No hay productos registrados todavia.
     </q-banner>
 
-    <q-dialog v-model="dialogoAbierto">
+    <q-dialog v-model="dialogoAbierto" persistent>
       <q-card style="width: 380px; max-width: 90vw">
         <q-card-section class="text-h6">
           {{ editando ? 'Editar producto' : 'Nuevo producto' }}
@@ -54,7 +54,7 @@
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancelar" v-close-popup />
-          <q-btn flat color="primary" label="Guardar" @click="guardar" v-close-popup />
+          <q-btn flat color="primary" label="Guardar" @click="guardar" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -63,17 +63,19 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { useProductosStore } from '../stores/stores.js'
+import { useQuasar } from 'quasar'
+import { useProductosStore, CATEGORIA_MENU } from '../stores/stores.js'
+import { formatoMoneda } from '../stores/utils.js'
 
+const $q = useQuasar()
 const productosStore = useProductosStore()
 
 const dialogoAbierto = ref(false)
 const editando = ref(null)
 const form = ref({ nombre: '', categoria: '', precio_actual: null })
 
-const categoriasDisponibles = computed(() =>
-  Object.keys(productosStore.porCategoria)
-)
+const categoriasDisponibles = ref(CATEGORIA_MENU)
+
 
 function crearCategoria(val, done) {
   done(val, 'add-unique')
@@ -92,19 +94,35 @@ function abrirDialogoEditar(producto) {
 }
 
 function guardar() {
-  if (!form.value.nombre || !form.value.categoria || !form.value.precio_actual) return
-  if (editando.value) {
+  if (!form.value.nombre || !form.value.categoria || !form.value.precio_actual) {
+    $q.notify({ type: 'negative', message: 'Debes completar nombre, categoria y precio.' })
+    return
+  }
+  if (form.value.precio_actual <= 0) {
+    $q.notify({ type: 'negative', message: 'El precio debe ser mayor a cero.' })
+    return
+  }
+  const estabaEditando = !!editando.value
+  if (estabaEditando) {
     productosStore.editarProducto(editando.value, form.value)
   } else {
     productosStore.agregarProducto(form.value)
   }
+  dialogoAbierto.value = false
+  $q.notify({ type: 'positive', message: estabaEditando ? 'Producto actualizado' : 'Producto agregado' })
 }
 
 function eliminar(producto) {
-  productosStore.eliminarProducto(producto.id)
+  $q.dialog({
+    title: 'Eliminar producto',
+    message: `¿Seguro que quieres eliminar "${producto.nombre}"?`,
+    cancel: { label: 'Volver', flat: true },
+    ok: { label: 'Si, eliminar', color: 'negative', flat: true },
+    persistent: true
+  }).onOk(() => {
+    productosStore.eliminarProducto(producto.id)
+  })
 }
 
-function formatoMoneda(valor) {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(valor || 0)
-}
+
 </script>

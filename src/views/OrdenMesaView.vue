@@ -90,7 +90,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <q-dialog v-model="dialogoAgregar">
+    <q-dialog v-model="dialogoAgregar" persistent>
       <q-card style="width: 420px; max-width: 90vw">
         <q-card-section class="text-h6">Agregar producto</q-card-section>
         <q-card-section>
@@ -123,7 +123,8 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { useMesasStore, useOrdenesStore, useProductosStore, useDiaStore } from '../stores/stores.js'
+import { useMesasStore, useOrdenesStore, useProductosStore, useDiaStore, useAuthStore } from '../stores/stores.js'
+import { formatoMoneda, formatearHora } from '../stores/utils.js'
 const props = defineProps({ id: { type: [String, Number], required: true } })
 
 const router = useRouter()
@@ -133,6 +134,7 @@ const mesasStore = useMesasStore()
 const ordenesStore = useOrdenesStore()
 const productosStore = useProductosStore()
 const diaStore = useDiaStore()
+const authStore = useAuthStore()
 
 const dialogoAgregar = ref(false)
 const dialogoCancelar = ref(false)
@@ -143,16 +145,17 @@ const items = computed(() => (orden.value ? ordenesStore.itemsDeOrden(orden.valu
 const subtotal = computed(() => (orden.value ? ordenesStore.subtotalDeOrden(orden.value.id) : 0))
 
 function ocuparMesa() {
+  if (!mesa.value) return
   if (diaStore.diaCerrado) {
     $q.notify({ type: 'negative', message: 'El dia esta cerrado. No se pueden abrir nuevas ordenes.' })
     return
   }
-  ordenesStore.abrirOrden(mesa.value.id)
+  ordenesStore.abrirOrden(mesa.value.id, authStore.currentUser?.nombre)
   $q.notify({ type: 'positive', message: `Mesa ${mesa.value.numero} ocupada`, timeout: 900 })
 }
 
 function cancelarMesa() {
-  if (!orden.value) return
+  if (!orden.value || !mesa.value) return
   const numero = mesa.value.numero
   ordenesStore.cancelarOrden(orden.value.id)
   $q.notify({ type: 'info', message: `Mesa ${numero} cancelada y liberada` })
@@ -171,14 +174,7 @@ function pedirCuenta() {
   router.push({ name: 'cobro', params: { id: mesa.value.id } })
 }
 
-function formatoMoneda(valor) {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(valor || 0)
-}
 
-function formatearHora(iso) {
-  if (!iso) return '-'
-  return new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
-}
 </script>
 
 <style scoped>
